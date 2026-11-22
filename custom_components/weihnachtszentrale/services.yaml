@@ -1,0 +1,28 @@
+request_cover_close:
+  fields:
+    cover_entity:
+      required: true
+      selector:
+        entity:
+          domain: cover
+    position:
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 100
+          mode: box
+    safety_script:
+      selector:
+        entity:
+          domain: script
+    source:
+      selector:
+        text:
+cancel_cover_close:
+  fields:
+    cover_entity:
+      required: true
+      selector:
+        entity:
+          domain: cover

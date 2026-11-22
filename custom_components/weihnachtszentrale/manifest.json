@@ -1,0 +1,20 @@
+{
+  "domain": "weihnachtszentrale",
+  "name": "Weihnachtszentrale (Prototype)",
+  "version": "0.7.0",
+  "documentation": "https://github.com/loskrachos/weihnachtszentrale-hacs",
+  "integration_type": "hub",
+  "dependencies": [
+    "frontend",
+    "http",
+    "lovelace",
+    "sun",
+    "websocket_api"
+  ],
+  "codeowners": [
+    "@loskrachos"
+  ],
+  "config_flow": true,
+  "iot_class": "local_push",
+  "issue_tracker": "https://github.com/loskrachos/weihnachtszentrale-hacs/issues"
+}

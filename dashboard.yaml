@@ -1,0 +1,20 @@
+title: Weihnachtszentrale
+views:
+  - title: Übersicht
+    path: uebersicht
+    type: panel
+    cards:
+      - type: custom:weihnachtszentrale-card
+        view: overview
+  - title: Konfiguration
+    path: konfiguration
+    type: panel
+    cards:
+      - type: custom:weihnachtszentrale-card
+        view: configuration
+  - title: Kommende Aktionen
+    path: aktionen
+    type: panel
+    cards:
+      - type: custom:weihnachtszentrale-card
+        view: actions

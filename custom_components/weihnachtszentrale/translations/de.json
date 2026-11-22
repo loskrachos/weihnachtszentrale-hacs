@@ -1,0 +1,47 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Weihnachtszentrale",
+        "description": "Lokale Konfiguration einrichten."
+      }
+    },
+    "abort": {
+      "already_configured": "Bereits eingerichtet."
+    }
+  },
+  "services": {
+    "request_cover_close": {
+      "name": "Rollladen | Schließung anfordern",
+      "description": "Schließwunsch sofort ausführen oder bei abendlicher Weihnachtsbeleuchtung bis Licht-Aus vormerken. Nur explizit angebundene Automationen sind geschützt.",
+      "fields": {
+        "cover_entity": {
+          "name": "Rollladen",
+          "description": "Der zu schließende Rollladen."
+        },
+        "position": {
+          "name": "Zielposition",
+          "description": "0 bedeutet vollständig geschlossen. Eine Schließanforderung öffnet keinen bereits weiter geschlossenen Rollladen."
+        },
+        "safety_script": {
+          "name": "Vorhandenes Sicherheitsskript",
+          "description": "Optional; führt vollständiges Schließen mit seinen vorhandenen Sicherheitsprüfungen aus. Muss status success zurückgeben."
+        },
+        "source": {
+          "name": "Anlass",
+          "description": "Bezeichnung der aufrufenden Automation."
+        }
+      }
+    },
+    "cancel_cover_close": {
+      "name": "Rollladen | Schließanforderung verwerfen",
+      "description": "Ausstehende Anforderung ohne Rollladenfahrt entfernen, etwa vor dem morgendlichen Öffnen.",
+      "fields": {
+        "cover_entity": {
+          "name": "Rollladen",
+          "description": "Rollladen mit ausstehender Anforderung."
+        }
+      }
+    }
+  }
+}

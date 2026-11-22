@@ -1,0 +1,33 @@
+name: Tests and installation package
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - name: Python tests
+        run: python -m unittest discover -s tests -v
+      - name: JavaScript syntax and regression tests
+        shell: bash
+        run: |
+          for file in custom_components/weihnachtszentrale/frontend/*.js; do node --check "$file"; done
+          for test in tests/*.cjs; do node "$test"; done
+      - name: Build verified installation archive
+        run: python scripts/build_zip.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installation-${{ github.sha }}
+          path: artifacts/*
+          if-no-files-found: error

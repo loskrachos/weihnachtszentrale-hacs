@@ -1,0 +1,43 @@
+name: Prepare tested GitHub release
+on:
+  push:
+    tags:
+      - 'v*'
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - name: Validate release tag
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          python - <<'PY'
+          import json, os
+          version = json.load(open('custom_components/weihnachtszentrale/manifest.json'))['version']
+          assert os.environ['RELEASE_TAG'] == 'v' + version, 'Tag and manifest version differ'
+          PY
+      - name: Test and build
+        shell: bash
+        run: |
+          set -e
+          python -m unittest discover -s tests
+          for file in custom_components/weihnachtszentrale/frontend/*.js; do node --check "$file"; done
+          for test in tests/*.cjs; do node "$test"; done
+          python scripts/build_zip.py
+      - uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64
+        with:
+          draft: true
+          prerelease: true
+          body_path: docs/RELEASE_NOTES.md
+          files: |
+            artifacts/*.zip
+            artifacts/*.zip.sha256
