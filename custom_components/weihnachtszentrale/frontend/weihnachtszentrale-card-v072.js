@@ -1,4 +1,4 @@
-/* v0.7.1: configurable backend light control; no device IDs embedded. */
+/* v0.7.2: configurable backend light control; no device IDs embedded. */
 class WeihnachtszentraleCard extends HTMLElement {
   setConfig(config) {
     this.config=config||{};
@@ -63,7 +63,7 @@ class WeihnachtszentraleCard extends HTMLElement {
     try {
       const result=await this._hass.connection.sendMessagePromise({type:'weihnachtszentrale/preview',settings:JSON.parse(JSON.stringify(this.settings))});
       if(request!==this._previewRequest)return;
-      if(result.model_version!=='0.7.1')throw new Error('Backend v0.7.1 fehlt. Python-Dateien aktualisieren und Home Assistant neu starten.');
+      if(result.model_version!=='0.7.2')throw new Error('Backend v0.7.2 fehlt. Python-Dateien aktualisieren und Home Assistant neu starten.');
       this.preview=result;this._showPreview(panel);
     } catch(e) {
       if(request===this._previewRequest)panel.replaceChildren(this._el('p',{className:'error',text:String(e.message||e)}));
@@ -141,7 +141,7 @@ class WeihnachtszentraleCard extends HTMLElement {
     const panel=this._root?.querySelector('.engine-status');if(!panel)return;
     try{
       const data=await this._hass.connection.sendMessagePromise({type:'weihnachtszentrale/engine'});
-      if(data.model_version!=='0.7.1')throw new Error('Backend v0.7.1 fehlt.');
+      if(data.model_version!=='0.7.2')throw new Error('Backend v0.7.2 fehlt.');
       panel.replaceChildren(this._el('p',{text:data.enabled?'Automatik aktiv · läuft auch ohne geöffnetes Dashboard.':'Automatik pausiert · es werden keine Schaltbefehle gesendet.'}));
       panel.append(this._el('p',{className:'small',text:'Aktivieren wendet den gespeicherten Zeitplan sofort auf alle Geräte mit aktiver Teilnahme an. Pausieren stoppt die Automatik und lässt die Lichter unverändert. Modus Aus schaltet bei aktiver Automatik die teilnehmenden Lichter aus.'}));
       const button=this._el('button',{text:data.enabled?'Automatik pausieren':'Automatik aktivieren',className:'primary'});
@@ -238,7 +238,7 @@ class WeihnachtszentraleCard extends HTMLElement {
       }
       const result=await this._hass.connection.sendMessagePromise({type:'weihnachtszentrale/actions',settings:JSON.parse(JSON.stringify(this.settings))});
       if(request!==this._actionRequest)return;
-      if(result.model_version!=='0.7.1')throw new Error('Backend v0.7.1 fehlt. Python-Dateien aktualisieren und Home Assistant neu starten.');
+      if(result.model_version!=='0.7.2')throw new Error('Backend v0.7.2 fehlt. Python-Dateien aktualisieren und Home Assistant neu starten.');
       this._actions=result;this._showActions(panel);
     }catch(e){if(request===this._actionRequest)panel.replaceChildren(this._el('p',{className:'error',text:String(e.message||e)}))}
   }
@@ -287,7 +287,7 @@ class WeihnachtszentraleCard extends HTMLElement {
     </style>`;
     const card=this._el('ha-card');this._root.append(card);
     const titles={overview:'Übersicht',configuration:'Konfiguration',actions:'Kommende Aktionen'};
-    card.append(this._el('h2',{text:'🎄 Weihnachtszentrale v0.7.1 – '+titles[this._view()]}));
+    card.append(this._el('h2',{text:'🎄 Weihnachtszentrale v0.7.2 – '+titles[this._view()]}));
     if(this.error)card.append(this._el('p',{className:'error',text:this.error}));
     if(!this.settings)return;
     if(this._view()==='overview'){this._renderOverview(card);return}

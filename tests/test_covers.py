@@ -64,9 +64,27 @@ class CoverTests(unittest.IsolatedAsyncioTestCase):
  async def test_expiry_no_stale_morning_close(self):
   await self.request();self.now=self.now+timedelta(hours=14);self.states['light.tree']=state('off')
   await self.coord.process();self.assertFalse(self.calls);self.assertFalse(self.coord.pending)
- async def test_manual_position_change_cancels_request(self):
+ async def test_manual_partial_movement_keeps_close_request(self):
   await self.request();self.states['cover.window']=state('open',80);await self.coord.process()
+  self.assertFalse(self.calls);self.assertIn('cover.window',self.coord.pending)
+  self.states['light.tree']=state('off');await self.coord.process();await self.coord.process()
+  self.assertEqual(self.calls,[('cover','close_cover',{'entity_id':'cover.window'})])
+ async def test_partial_target_after_manual_movement_and_restart(self):
+  await self.request(position=30);self.states['cover.window']=state('open',60)
+  await self.coord.process();new=Coordinator(self.hass,self.engine,self.store,lambda:self.now);await new.load()
+  await new.process();self.assertFalse(self.calls)
+  self.states['light.tree']=state('off');await new.process()
+  self.assertEqual(self.calls,[('cover','set_cover_position',{'entity_id':'cover.window','position':30})])
+ async def test_manual_further_closed_target_does_not_open(self):
+  await self.request(position=30);self.states['cover.window']=state('open',10)
+  await self.coord.process();self.assertIn('cover.window',self.coord.pending)
+  self.states['light.tree']=state('off');await self.coord.process()
   self.assertFalse(self.calls);self.assertFalse(self.coord.pending)
+ async def test_manual_reopening_keeps_close_request(self):
+  self.states['cover.window']=state('open',50);await self.request()
+  self.states['cover.window']=state('open',100);await self.coord.process()
+  self.assertIn('cover.window',self.coord.pending);self.assertFalse(self.calls)
+  self.states['light.tree']=state('off');await self.coord.process();self.assertEqual(len(self.calls),1)
  async def test_explicit_cancel_does_not_move(self):
   await self.request();await self.coord.cancel('cover.window');self.states['light.tree']=state('off')
   await self.coord.process();self.assertFalse(self.calls)

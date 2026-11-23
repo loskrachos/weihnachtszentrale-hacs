@@ -120,4 +120,4 @@ def build_preview(settings, now, timezone_name, solar_event, days_count=2):
                         "effective_windows": [{"start": iso(a), "end": iso(b)} for a, b in effective]})
     return {"generated_at": iso(now_utc), "timezone": timezone_name, "days": days,
             "devices": devices, "read_only": True,
-            "warnings": list(dict.fromkeys(lookback_warnings)), "model_version": "0.7.1"}
+            "warnings": list(dict.fromkeys(lookback_warnings)), "model_version": "0.7.2"}

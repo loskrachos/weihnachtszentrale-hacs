@@ -63,7 +63,7 @@ class LightEngine:
     def status(self):
         return {'enabled': self.state['enabled'], 'errors': deepcopy(self.errors),
                 'history': deepcopy(self.history), 'last_checked': self.last_checked,
-                'model_version': '0.7.1', 'covers': self.covers.status() if self.covers else {}}
+                'model_version': '0.7.2', 'covers': self.covers.status() if self.covers else {}}
 
     async def enable(self, enabled):
         async with self.lock:

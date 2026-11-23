@@ -185,7 +185,7 @@ class BackendLifecycleTests(unittest.IsolatedAsyncioTestCase):
         env['async_track_time_interval']=track
         h=SimpleNamespace(data={},is_running=False,config=SimpleNamespace(time_zone='Europe/Berlin'),
             config_entries=SimpleNamespace(async_forward_entry_setups=AsyncMock(),async_unload_platforms=AsyncMock(return_value=True)),
-            bus=SimpleNamespace(async_listen_once=listen,async_listen=lambda *args:lambda:cancelled.append('manual')),states={'light.tree':SimpleNamespace(state='on')},
+            bus=SimpleNamespace(async_listen_once=listen),states={'light.tree':SimpleNamespace(state='on')},
             services=SimpleNamespace(async_call=call))
         await env['async_setup_entry'](h,object()); await callbacks['timer'](None)
         self.assertFalse(calls)
@@ -194,6 +194,6 @@ class BackendLifecycleTests(unittest.IsolatedAsyncioTestCase):
         result=[];conn=SimpleNamespace(send_result=lambda *x:result.append(x),send_error=lambda *x:None)
         await env['ws_enable'](h,conn,{'id':1,'enabled':False})
         self.assertFalse(result[-1][1]['enabled'])
-        await env['ws_engine'](h,conn,{'id':2});self.assertEqual(result[-1][1]['model_version'],'0.7.1')
-        await env['async_unload_entry'](h,object());self.assertEqual(set(cancelled),{'timer','start','manual'})
+        await env['ws_engine'](h,conn,{'id':2});self.assertEqual(result[-1][1]['model_version'],'0.7.2')
+        await env['async_unload_entry'](h,object());self.assertEqual(set(cancelled),{'timer','start'})
         await callbacks['timer'](None);self.assertEqual(len(calls),1)

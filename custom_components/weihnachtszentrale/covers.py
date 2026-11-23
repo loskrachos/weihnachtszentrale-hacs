@@ -120,9 +120,6 @@ class CoverCoordinator:
                 continue
             actual = self.hass.states.get(cover)
             current = getattr(actual, 'attributes', {}).get('current_position')
-            if not immediate and current is not None and item['initial_position'] is not None and current != item['initial_position']:
-                await self.cancel(cover, 'Position zwischenzeitlich verändert; Anforderung verworfen')
-                continue
             # Only routed closes are held; opening is untouched. Pausing
             # suppresses queue replay; a NEW automatic request passes through.
             item['blocked_by'] = self.blockers(cover) if self.engine.state['enabled'] else []

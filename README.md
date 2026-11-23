@@ -1,6 +1,6 @@
 # Weihnachtszentrale
 
-v0.7.1 – erste öffentliche Vorabversion einer Home-Assistant-Integration für Weihnachtsbeleuchtung. Lokale Regressionstests bestanden; die Erstinstallation über den Marketplace und individuelle Rollladenfahrten sind separat zu prüfen.
+v0.7.2 – erste öffentliche Vorabversion einer Home-Assistant-Integration für Weihnachtsbeleuchtung. Lokale Regressionstests bestanden; die Erstinstallation über den Marketplace und individuelle Rollladenfahrten sind separat zu prüfen.
 
 Geräte, Zeitprofile und Saisonmodi im Dashboard konfigurieren. Lichtsteuerung läuft im Backend. Optionale Rollladenkoordination ist standardmäßig aus. Individuelle Automationen und Sicherheitsskripte werden ausdrücklich angebunden und bleiben in Home Assistant.
 

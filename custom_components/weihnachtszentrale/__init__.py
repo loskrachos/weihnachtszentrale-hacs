@@ -114,22 +114,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await covers.load()
     runtime['covers'] = engine.covers = covers
     await hass.config_entries.async_forward_entry_setups(entry, [Platform.BINARY_SENSOR])
-    async def manual_cover_call(event):
-        # Observe manual UI calls only to discard stale pending requests. This
-        # never blocks, changes or intercepts the manual cover action itself.
-        if not getattr(event.context, 'user_id', None):
-            return
-        data = event.data
-        if data.get('domain') != 'cover' or data.get('service') not in ('open_cover', 'close_cover', 'set_cover_position', 'stop_cover', 'toggle'):
-            return
-        selected = data.get('service_data', {}).get('entity_id')
-        selected = [selected] if isinstance(selected, str) else selected
-        if not selected or 'all' in selected:
-            selected = list(covers.pending)
-        async with engine.lock:
-            for entity_id in selected:
-                await covers.cancel(entity_id, 'Manuelle Rollladenbedienung; Anforderung verworfen')
-    runtime['cancel_manual'] = hass.bus.async_listen('call_service', manual_cover_call)
     async def periodic(_now):
         if hass.is_running:
             await engine.tick()
@@ -149,7 +133,6 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         if not await hass.config_entries.async_unload_platforms(entry, [Platform.BINARY_SENSOR]):
             return False
         runtime['cancel_timer']()
-        runtime['cancel_manual']()
         if 'cancel_start' in runtime:
             runtime['cancel_start']()
         await runtime['engine'].stop()

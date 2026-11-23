@@ -1,7 +1,7 @@
-# v0.7.1 – Geräte ohne Zustandsrückmeldung
+# v0.7.2 – Preserve deferred cover targets after manual movement
 
-Pro Licht/Steckdose ist „Keine Zustandsrückmeldung (z. B. 433 MHz)“ wählbar. Die Automatik übergibt dann pro Zeitplanphase einmal den Ein-/Aus-Befehl, auch bei unbekanntem gemeldetem Zustand. Ein vorhandener gemeldeter Zustand wird bei dieser Option nicht als Bestätigung verwendet. Nicht verfügbare/fehlende Entitäten und Servicefehler bleiben Fehler, da HA nicht verfügbare Entitäten nicht ansteuert. Keine Dauersendung im 15-Sekunden-Takt; abgeschlossene Phasen bleiben über Neustarts gespeichert.
+Manual cover commands and reported position changes no longer discard a pending evening close request. While the assigned Christmas lights remain on, the user can adjust the cover. After the lights switch off, the original target is applied, including intermediate close positions. A cover already at or below the target is not opened again.
 
-Standard bleibt die bisherige Zustandsbehandlung. Alte Konfigurationen bleiben gültig. Auf der Übersicht wird bei solchen Geräten ausdrücklich kein tatsächlicher Schaltzustand behauptet. Option im Dashboard pro Gerät aktivieren und Einstellungen speichern. Die Änderung dieser Option gleicht einmal den aktuellen Zeitplan an.
+Explicit cancellation through “Verwerfen”, expiry, pause/disable behavior, safety scripts and error review remain unchanged. Existing pending requests are preserved across the upgrade; previously discarded requests cannot be reconstructed. No manual test movement is triggered by installation, but normal active requests may execute when their lighting hold is released.
 
-Update über Marketplace installieren, HA neu starten und Browser neu laden. Rollladenkoordination weiterhin optional und unverändert.
+Update through Marketplace, restart Home Assistant and reload the browser. Regression tests use simulated devices; physical evening-run acceptance is still pending. Addresses #3.

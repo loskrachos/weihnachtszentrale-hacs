@@ -239,7 +239,7 @@ class BackendFlowTests(unittest.IsolatedAsyncioTestCase):
         await env['ws_save'](h,conn,{'id':1,'settings':config});self.assertFalse(errors)
         h.data.clear();await env['async_setup_entry'](h,object())
         self.assertEqual(h.data['weihnachtszentrale']['settings']['times']['morning_on']['twilight'],'astronomical')
-        await env['ws_preview'](h,conn,{'id':2,'settings':config});self.assertFalse(errors);self.assertEqual(results[-1][1]['model_version'],'0.7.1')
+        await env['ws_preview'](h,conn,{'id':2,'settings':config});self.assertFalse(errors);self.assertEqual(results[-1][1]['model_version'],'0.7.2')
         self.assertIn('T04:00',results[-1][1]['days'][0]['rules'][0]['at'])
     async def test_invalid_preview_and_unloaded(self):
         env=backend_scope();errors=[];conn=SimpleNamespace(send_error=lambda *a:errors.append(a))
