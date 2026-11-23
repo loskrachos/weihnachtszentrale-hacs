@@ -99,11 +99,11 @@ class EngineTests(unittest.IsolatedAsyncioTestCase):
         self.actual['light.tree'].state='on'
         self.at(17); await self.engine.enable(True)
         self.assertEqual(len(self.calls),1)
-    async def test_no_feedback_unavailable_attempts_service(self):
+    async def test_no_feedback_unavailable_stays_error(self):
         self.config['devices'][0]['no_feedback']=True
         self.actual['light.tree'].state='unavailable'
         self.at(17); await self.engine.enable(True)
-        self.assertEqual(len(self.calls),1)
+        self.assertFalse(self.calls); self.assertIn('light.tree',self.engine.errors)
     async def test_no_feedback_missing_entity_stays_error(self):
         self.config['devices'][0]['no_feedback']=True
         self.actual.clear(); self.at(17); await self.engine.enable(True)

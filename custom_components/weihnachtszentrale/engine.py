@@ -113,7 +113,7 @@ class LightEngine:
             if self.state['phases'].get(entity_id) == target['token']:
                 continue
             actual = self.hass.states.get(entity_id)
-            if actual is None or (not target['no_feedback'] and actual.state in ('unknown', 'unavailable')):
+            if actual is None or actual.state == 'unavailable' or (not target['no_feedback'] and actual.state == 'unknown'):
                 self.errors[entity_id] = 'Nicht erreichbar; erneuter Versuch alle 15 Sekunden.'
                 continue
             desired = 'on' if target['on'] else 'off'

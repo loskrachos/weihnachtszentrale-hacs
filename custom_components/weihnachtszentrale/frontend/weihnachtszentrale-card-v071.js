@@ -219,7 +219,7 @@ class WeihnachtszentraleCard extends HTMLElement {
     const names={on:'An',off:'Aus',unavailable:'Nicht erreichbar',unknown:'Unbekannt'};
     for(const d of this.settings.devices){
       const state=this._hass.states[d.entity_id];
-      panel.append(this._el('p',{text:(d.name||d.entity_id)+': '+(d.no_feedback?'Ohne Zustandsrückmeldung – tatsächlicher Zustand unbekannt':(state?(names[state.state]||state.state):'Entität nicht vorhanden'))+' · '+d.entity_id}));
+      panel.append(this._el('p',{text:(d.name||d.entity_id)+': '+(d.no_feedback&&state&&state.state!=='unavailable'?'Ohne Zustandsrückmeldung – tatsächlicher Zustand unbekannt':(state?(names[state.state]||state.state):'Entität nicht vorhanden'))+' · '+d.entity_id}));
     }
   }
   async _refreshActions(){
