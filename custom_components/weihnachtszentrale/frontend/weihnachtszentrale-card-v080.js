@@ -1,4 +1,4 @@
-/* v0.7.2: configurable backend light control; no device IDs embedded. */
+/* v0.8.0: configurable backend light control; no device IDs embedded. */
 class WeihnachtszentraleCard extends HTMLElement {
   setConfig(config) {
     this.config=config||{};
@@ -13,6 +13,10 @@ class WeihnachtszentraleCard extends HTMLElement {
 
   set hass(value) {
     this._hass = value;
+    if(this._root&&this.settings&&this._view()==='configuration'){
+      const signature=JSON.stringify(this.settings.devices.map(d=>this._lightCapabilities(d.entity_id)));
+      if(signature!==this._capabilitiesSignature){this._capabilitiesSignature=signature;this.render()}
+    }
     if(this._root&&this._view()==='overview')this._showDeviceStates();
     if (!this._root) {
       this._root = this.attachShadow({mode:'open'});
@@ -63,7 +67,7 @@ class WeihnachtszentraleCard extends HTMLElement {
     try {
       const result=await this._hass.connection.sendMessagePromise({type:'weihnachtszentrale/preview',settings:JSON.parse(JSON.stringify(this.settings))});
       if(request!==this._previewRequest)return;
-      if(result.model_version!=='0.7.2')throw new Error('Backend v0.7.2 fehlt. Python-Dateien aktualisieren und Home Assistant neu starten.');
+      if(result.model_version!=='0.8.0')throw new Error('Backend v0.8.0 fehlt. Python-Dateien aktualisieren und Home Assistant neu starten.');
       this.preview=result;this._showPreview(panel);
     } catch(e) {
       if(request===this._previewRequest)panel.replaceChildren(this._el('p',{className:'error',text:String(e.message||e)}));
@@ -141,7 +145,7 @@ class WeihnachtszentraleCard extends HTMLElement {
     const panel=this._root?.querySelector('.engine-status');if(!panel)return;
     try{
       const data=await this._hass.connection.sendMessagePromise({type:'weihnachtszentrale/engine'});
-      if(data.model_version!=='0.7.2')throw new Error('Backend v0.7.2 fehlt.');
+      if(data.model_version!=='0.8.0')throw new Error('Backend v0.8.0 fehlt.');
       panel.replaceChildren(this._el('p',{text:data.enabled?'Automatik aktiv · läuft auch ohne geöffnetes Dashboard.':'Automatik pausiert · es werden keine Schaltbefehle gesendet.'}));
       panel.append(this._el('p',{className:'small',text:'Aktivieren wendet den gespeicherten Zeitplan sofort auf alle Geräte mit aktiver Teilnahme an. Pausieren stoppt die Automatik und lässt die Lichter unverändert. Modus Aus schaltet bei aktiver Automatik die teilnehmenden Lichter aus.'}));
       const button=this._el('button',{text:data.enabled?'Automatik pausieren':'Automatik aktivieren',className:'primary'});
@@ -204,6 +208,74 @@ class WeihnachtszentraleCard extends HTMLElement {
     this._actionControls(card);
 
   }
+  _lightCapabilities(entityId){
+    if(!entityId.startsWith('light.'))return {};
+    const a=this._hass.states[entityId]?.attributes||{},m=a.supported_color_modes||[];
+    const rgb=m.some(x=>['hs','xy','rgb','rgbw','rgbww'].includes(x));
+    return {brightness:m.some(x=>['brightness','color_temp','hs','xy','rgb','rgbw','rgbww','white'].includes(x)),
+      rgb,kelvin:m.includes('color_temp')&&Number.isFinite(a.min_color_temp_kelvin)&&Number.isFinite(a.max_color_temp_kelvin),
+      min:a.min_color_temp_kelvin,max:a.max_color_temp_kelvin,
+      effects:(a.supported_features&4)&&Array.isArray(a.effect_list)?a.effect_list.filter(x=>typeof x==='string'&&x.length):[],
+      transition:!!(a.supported_features&32)};
+  }
+  _extraSettings(d,box){
+    const cap=this._lightCapabilities(d.entity_id),saved=d.turn_on||{};
+    if(!cap.brightness&&!cap.rgb&&!cap.kelvin&&!cap.effects?.length&&!cap.transition&&!Object.keys(saved).length)return;
+    const button=this._el('button',{text:Object.keys(saved).length?'Übernommene Einstellungen bearbeiten':'Weitere Einstellmöglichkeiten vorhanden'});
+    const panel=this._el('div',{className:'extra-settings',hidden:true});
+    const build=()=>{
+      panel.replaceChildren();
+      panel.append(this._el('p',{className:'small',text:'Nur ausgewählte Werte beim Einschalten setzen. Änderungen werden mit „Einstellungen speichern“ übernommen und bei aktivem Licht sofort angewendet. Kein separater Testbefehl.'}));
+      const values=d.turn_on||{};
+      const update=(key,value)=>{d.turn_on={...(d.turn_on||{})};if(value===undefined)delete d.turn_on[key];else d.turn_on[key]=value;this._dirty=true;this._invalidatePreview()};
+      const numeric=(key,label,min,max,fallback)=>{
+        const active=this._el('input',{type:'checkbox',checked:key in values});
+        const number=this._el('input',{type:'number',min,max,value:String(values[key]??fallback),disabled:!(key in values)});
+        active.addEventListener('change',()=>{number.disabled=!active.checked;update(key,active.checked?Number(number.value):undefined)});
+        number.addEventListener('change',()=>{if(active.checked)update(key,Number(number.value))});
+        panel.append(this._field(label+' übernehmen',active),this._field(label,number));
+      };
+      if(cap.brightness)numeric('brightness_pct','Helligkeit (%)',1,100,100);
+      if(cap.transition)numeric('transition','Übergangszeit (Sekunden)',0,300,0);
+      const colorKeys=['effect','rgb_color','color_temp_kelvin'];
+      const current=colorKeys.find(k=>k in values)||'';
+      const modes=[['','Effekt / Farbe / Farbtemperatur unverändert lassen']];
+      if(cap.effects?.length)modes.push(['effect','Effekt übernehmen']);
+      if(cap.rgb)modes.push(['rgb_color','Farbe übernehmen']);
+      if(cap.kelvin)modes.push(['color_temp_kelvin','Farbtemperatur übernehmen']);
+      if(current&&!modes.some(x=>x[0]===current))modes.push([current,'Gespeicherte Einstellung nicht mehr verfügbar']);
+      const detail=this._el('div');
+      const show=(key)=>{
+        detail.replaceChildren();
+        if(key==='effect'){
+          const effects=cap.effects||[],old=d.turn_on?.effect;
+          const choices=[['','Effekt auswählen'],...effects.map(x=>[x,x])];
+          if(old&&!effects.includes(old))choices.push([old,old+' (nicht mehr verfügbar)']);
+          detail.append(this._field('Effekt',this._select(choices,old||'',v=>update('effect',v))));
+        }else if(key==='rgb_color'){
+          const rgb=d.turn_on?.rgb_color||[255,255,255];
+          const color=this._el('input',{type:'color',value:'#'+rgb.map(v=>v.toString(16).padStart(2,'0')).join('')});
+          color.addEventListener('change',()=>update('rgb_color',[1,3,5].map(i=>parseInt(color.value.slice(i,i+2),16))));
+          detail.append(this._field('Farbe',color));
+        }else if(key==='color_temp_kelvin'){
+          const kelvin=this._el('input',{type:'number',min:cap.min,max:cap.max,value:String(d.turn_on?.color_temp_kelvin??cap.min)});
+          kelvin.addEventListener('change',()=>update('color_temp_kelvin',Number(kelvin.value)));
+          detail.append(this._field('Farbtemperatur (Kelvin)',kelvin));
+        }
+      };
+      panel.append(this._field('Farbgestaltung',this._select(modes,current,v=>{
+        for(const key of colorKeys)update(key,undefined);
+        if(v==='effect')update(v,'');
+        if(v==='rgb_color')update(v,[255,255,255]);
+        if(v==='color_temp_kelvin')update(v,cap.min);
+        show(v);
+      })),detail);show(current);
+      const reset=this._el('button',{text:'Nur Ein/Aus verwenden'});
+      reset.addEventListener('click',()=>{delete d.turn_on;this._dirty=true;this._invalidatePreview();build()});panel.append(reset);
+    };
+    button.addEventListener('click',()=>{panel.hidden=!panel.hidden;if(!panel.hidden)build()});
+    box.append(button,panel);
+  }
   _renderActionsPage(card){
     card.append(this._el('p',{className:'small',text:'Zeitplan der kommenden 24 Stunden. Die Liste bestätigt keine ausgeführten Schaltbefehle; Automatikstatus auf der Übersicht beachten.'}));
     card.append(this._el('div',{className:'action-list'}));this._actionControls(card);
@@ -238,7 +310,7 @@ class WeihnachtszentraleCard extends HTMLElement {
       }
       const result=await this._hass.connection.sendMessagePromise({type:'weihnachtszentrale/actions',settings:JSON.parse(JSON.stringify(this.settings))});
       if(request!==this._actionRequest)return;
-      if(result.model_version!=='0.7.2')throw new Error('Backend v0.7.2 fehlt. Python-Dateien aktualisieren und Home Assistant neu starten.');
+      if(result.model_version!=='0.8.0')throw new Error('Backend v0.8.0 fehlt. Python-Dateien aktualisieren und Home Assistant neu starten.');
       this._actions=result;this._showActions(panel);
     }catch(e){if(request===this._actionRequest)panel.replaceChildren(this._el('p',{className:'error',text:String(e.message||e)}))}
   }
@@ -287,7 +359,7 @@ class WeihnachtszentraleCard extends HTMLElement {
     </style>`;
     const card=this._el('ha-card');this._root.append(card);
     const titles={overview:'Übersicht',configuration:'Konfiguration',actions:'Kommende Aktionen'};
-    card.append(this._el('h2',{text:'🎄 Weihnachtszentrale v0.7.2 – '+titles[this._view()]}));
+    card.append(this._el('h2',{text:'🎄 Weihnachtszentrale v0.8.0 – '+titles[this._view()]}));
     if(this.error)card.append(this._el('p',{className:'error',text:this.error}));
     if(!this.settings)return;
     if(this._view()==='overview'){this._renderOverview(card);return}
@@ -308,6 +380,7 @@ class WeihnachtszentraleCard extends HTMLElement {
       const off=this._el('input',{type:'number',min:-180,max:180,value:String(t.offset)});off.addEventListener('change',()=>t.offset=Number(off.value));
       cell.append(this._field('Sonnen-Offset (Minuten)',off));times.append(cell);
     }card.append(times);
+    this._capabilitiesSignature=JSON.stringify(this.settings.devices.map(d=>this._lightCapabilities(d.entity_id)));
     card.append(this._el('h3',{text:'Dekoelemente'}));
     for(const d of this.settings.devices){
       const box=this._el('div',{className:'entry'});
@@ -323,6 +396,7 @@ class WeihnachtszentraleCard extends HTMLElement {
       const noFeedback=this._el('input',{type:'checkbox',checked:d.no_feedback===true});
       noFeedback.addEventListener('change',()=>{d.no_feedback=noFeedback.checked});
       grid.append(this._field('Keine Zustandsrückmeldung (z. B. 433 MHz)',noFeedback));box.append(grid);
+      this._extraSettings(d,box);
       const rm=this._el('button',{text:'Entfernen'});rm.addEventListener('click',()=>{this._dirty=true;this._invalidatePreview();this.settings.devices=this.settings.devices.filter(x=>x.id!==d.id);this.render()});box.append(rm);card.append(box);
     }
     const registered=new Set(this.settings.devices.map(d=>d.entity_id));

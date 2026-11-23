@@ -9,7 +9,7 @@ set innerHTML(v){this.html=v;this.children=[]}
 attachShadow(){return new Element('shadow')}
 }
 let Card;
-vm.runInNewContext(fs.readFileSync(__dirname+'/../custom_components/weihnachtszentrale/frontend/weihnachtszentrale-card-v072.js','utf8'),{HTMLElement:Element,document:{createElement:t=>new Element(t)},customElements:{define:(n,c)=>Card=c},window:{},crypto:{randomUUID:()=> 'new-id'},alert:()=>{}});
+vm.runInNewContext(fs.readFileSync(__dirname+'/../custom_components/weihnachtszentrale/frontend/weihnachtszentrale-card-v080.js','utf8'),{HTMLElement:Element,document:{createElement:t=>new Element(t)},customElements:{define:(n,c)=>Card=c},window:{},crypto:{randomUUID:()=> 'new-id'},alert:()=>{}});
 const all=(e,p)=>[...(p(e)?[e]:[]),...e.children.flatMap(c=>all(c,p))];
 (async()=>{
 const time={event:'fixed',time:'06:30',offset:0};
@@ -28,7 +28,7 @@ button('Entfernen').handlers.click();assert.equal(c.settings.devices.length,1);
 await c._load();assert.equal(c.settings.season,'full');
 c._hass.connection.sendMessagePromise=async()=>{throw Error('Testfehler')};await c._load();assert.equal(c.error,'Testfehler');
 // Preview uses unsaved values and does not save; stale requests are ignored.
-const payload={model_version:'0.7.2',timezone:'Europe/Berlin',days:[{date:'2026-10-29',rules:[{key:'morning_on',at:'2026-10-29T06:30:00+01:00',warning:null}],warnings:[]}],devices:[]};
+const payload={model_version:'0.8.0',timezone:'Europe/Berlin',days:[{date:'2026-10-29',rules:[{key:'morning_on',at:'2026-10-29T06:30:00+01:00',warning:null}],warnings:[]}],devices:[]};
 c._hass.connection.sendMessagePromise=async m=>{calls.push(structuredClone(m));return payload};
 c.error='';c.render();const panel=c._root.querySelector('.preview');const previewButton=button('Vorschau berechnen');
 await c._calculatePreview(panel,previewButton);assert.equal(c.preview,payload);assert.equal(calls.at(-1).type,'weihnachtszentrale/preview');assert.equal(calls.at(-1).settings.season,'full');

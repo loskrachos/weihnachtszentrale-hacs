@@ -1,6 +1,6 @@
 """Constants for the Christmas controller prototype."""
 DOMAIN = "weihnachtszentrale"
-VERSION = "0.7.2"
+VERSION = "0.8.0"
 SIGNAL_SETTINGS_CHANGED = DOMAIN + '_settings_changed'
 STORE_VERSION = 1
 STORE_KEY = "weihnachtszentrale.settings"

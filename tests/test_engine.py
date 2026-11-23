@@ -194,6 +194,6 @@ class BackendLifecycleTests(unittest.IsolatedAsyncioTestCase):
         result=[];conn=SimpleNamespace(send_result=lambda *x:result.append(x),send_error=lambda *x:None)
         await env['ws_enable'](h,conn,{'id':1,'enabled':False})
         self.assertFalse(result[-1][1]['enabled'])
-        await env['ws_engine'](h,conn,{'id':2});self.assertEqual(result[-1][1]['model_version'],'0.7.2')
+        await env['ws_engine'](h,conn,{'id':2});self.assertEqual(result[-1][1]['model_version'],'0.8.0')
         await env['async_unload_entry'](h,object());self.assertEqual(set(cancelled),{'timer','start'})
         await callbacks['timer'](None);self.assertEqual(len(calls),1)

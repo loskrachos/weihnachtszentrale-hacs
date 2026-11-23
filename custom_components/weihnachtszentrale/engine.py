@@ -6,6 +6,7 @@ import json
 import logging
 
 from .preview import build_preview
+from .light_options import supported_turn_on
 
 _LOGGER = logging.getLogger(__name__)
 UTC = timezone.utc
@@ -36,8 +37,11 @@ def targets(settings, now, timezone_name, solar_event):
                             [v.isoformat() if v else None for v in boundary]], sort_keys=True)
         if config.get('no_feedback', False):
             token += ':no_feedback'
+        turn_on = config.get('turn_on', {})
+        if active and turn_on:
+            token += ':turn_on:' + json.dumps(turn_on, sort_keys=True)
         result[device['entity_id']] = {'on': active is not None, 'token': token,
-                                        'no_feedback': config.get('no_feedback', False)}
+                                        'no_feedback': config.get('no_feedback', False), 'turn_on': deepcopy(turn_on)}
     return result
 
 
@@ -63,7 +67,7 @@ class LightEngine:
     def status(self):
         return {'enabled': self.state['enabled'], 'errors': deepcopy(self.errors),
                 'history': deepcopy(self.history), 'last_checked': self.last_checked,
-                'model_version': '0.7.2', 'covers': self.covers.status() if self.covers else {}}
+                'model_version': '0.8.0', 'covers': self.covers.status() if self.covers else {}}
 
     async def enable(self, enabled):
         async with self.lock:
@@ -118,10 +122,11 @@ class LightEngine:
                 continue
             desired = 'on' if target['on'] else 'off'
             try:
-                if target['no_feedback'] or actual.state != desired:
+                options = supported_turn_on(target['turn_on'], entity_id, actual) if target['on'] else {}
+                if target['no_feedback'] or actual.state != desired or options:
                     await asyncio.wait_for(self.hass.services.async_call(
                         entity_id.split('.')[0], 'turn_' + desired,
-                        {'entity_id': entity_id}, blocking=True), timeout=20)
+                        {'entity_id': entity_id, **options}, blocking=True), timeout=20)
                     self.history.append({'at': now.isoformat(), 'entity_id': entity_id,
                                          'action': desired, 'result': 'Befehl übergeben (keine Zustandsbestätigung)'})
                     self.history = self.history[-20:]

@@ -1,7 +1,9 @@
-# v0.7.2 – Preserve deferred cover targets after manual movement
+# v0.8.0 – Opt-in device turn-on settings
 
-Manual cover commands and reported position changes no longer discard a pending evening close request. While the assigned Christmas lights remain on, the user can adjust the cover. After the lights switch off, the original target is applied, including intermediate close positions. A cover already at or below the target is not opened again.
+- Inspect advertised light capabilities without sending commands. A per-device button opens additional settings only where supported.
+- Opt into brightness, effect or RGB color or color temperature, and transition. Unselected properties are omitted from the service call.
+- Apply configured values once at turn-on, including when the light is already on. Saving changes during an active phase applies them once immediately. No repeated enforcement every 15 seconds or after restart.
+- Revalidate current capabilities; unsupported settings show an error and do not prevent normal turn-off.
+- Existing settings, lights and deferred cover requests remain compatible.
 
-Explicit cancellation through “Verwerfen”, expiry, pause/disable behavior, safety scripts and error review remain unchanged. Existing pending requests are preserved across the upgrade; previously discarded requests cannot be reconstructed. No manual test movement is triggered by installation, but normal active requests may execute when their lighting hold is released.
-
-Update through Marketplace, restart Home Assistant and reload the browser. Regression tests use simulated devices; physical evening-run acceptance is still pending. Addresses #3.
+Automated tests use simulated HA/DOM interfaces. First real-device effect acceptance is pending. No preset is selected automatically. Separate scene/script/select startup actions are not included in this first part of #2. Update installation should follow completion of the current evening cover acceptance run.

@@ -179,7 +179,7 @@ def backend_scope():
             n.decorator_list=[];nodes.append(n)
     env={'re':re,'vol':SimpleNamespace(Invalid=Invalid),'HomeAssistant':object,'ConfigEntry':object,
          'deepcopy':deepcopy,'asyncio':asyncio,'DOMAIN':'weihnachtszentrale','STORE_VERSION':1,'STORE_KEY':'weihnachtszentrale.settings',
-         'DEFAULT_SETTINGS':settings(),'build_preview':preview.build_preview,'dt_util':SimpleNamespace(now=lambda:datetime(2026,10,30,12,tzinfo=TZ)),
+         'validate_turn_on':load('light_options').validate_turn_on,'DEFAULT_SETTINGS':settings(),'build_preview':preview.build_preview,'dt_util':SimpleNamespace(now=lambda:datetime(2026,10,30,12,tzinfo=TZ)),
          'make_solar_event':lambda h:solar, 'LightEngine':Engine, 'CoverCoordinator':Coordinator,
          'timedelta':timedelta, 'EVENT_HOMEASSISTANT_STARTED':'homeassistant_started',
          'async_track_time_interval':lambda *args:lambda:None,
@@ -239,7 +239,7 @@ class BackendFlowTests(unittest.IsolatedAsyncioTestCase):
         await env['ws_save'](h,conn,{'id':1,'settings':config});self.assertFalse(errors)
         h.data.clear();await env['async_setup_entry'](h,object())
         self.assertEqual(h.data['weihnachtszentrale']['settings']['times']['morning_on']['twilight'],'astronomical')
-        await env['ws_preview'](h,conn,{'id':2,'settings':config});self.assertFalse(errors);self.assertEqual(results[-1][1]['model_version'],'0.7.2')
+        await env['ws_preview'](h,conn,{'id':2,'settings':config});self.assertFalse(errors);self.assertEqual(results[-1][1]['model_version'],'0.8.0')
         self.assertIn('T04:00',results[-1][1]['days'][0]['rules'][0]['at'])
     async def test_invalid_preview_and_unloaded(self):
         env=backend_scope();errors=[];conn=SimpleNamespace(send_error=lambda *a:errors.append(a))

@@ -21,6 +21,7 @@ from .actions import build_actions
 from .solar import make_solar_event
 from .engine import LightEngine
 from .covers import CoverCoordinator
+from .light_options import validate_turn_on
 from .services import async_setup_services
 from .frontend import async_setup_frontend
 from homeassistant.helpers import config_validation as cv
@@ -48,7 +49,7 @@ def validate_settings(value: dict) -> dict:
     seen = set()
     clean = []
     for d in devices:
-        if not isinstance(d, dict) or (not {"id", "entity_id", "name", "enabled", "season", "profile", "cover"} <= set(d) or set(d) - {"id", "entity_id", "name", "enabled", "season", "profile", "cover", "no_feedback"}):
+        if not isinstance(d, dict) or (not {"id", "entity_id", "name", "enabled", "season", "profile", "cover"} <= set(d) or set(d) - {"id", "entity_id", "name", "enabled", "season", "profile", "cover", "no_feedback", "turn_on"}):
             raise vol.Invalid("Invalid device entry")
         entity_id = d["entity_id"]
         if not isinstance(entity_id, str) or not _ENTITY.fullmatch(entity_id) or entity_id in seen:
@@ -64,7 +65,12 @@ def validate_settings(value: dict) -> dict:
             or d["season"] not in ("full", "both")
             or d["profile"] not in ("morning", "evening", "both")):
             raise vol.Invalid("Invalid device fields")
-        clean.append(dict(d))
+        if 'turn_on' in d:
+            try:
+                validate_turn_on(d['turn_on'], entity_id)
+            except ValueError as exc:
+                raise vol.Invalid(str(exc)) from exc
+        clean.append(deepcopy(d))
     times = value["times"]
     if not isinstance(times, dict) or set(times) != set(_KEYS):
         raise vol.Invalid("Invalid time keys")
