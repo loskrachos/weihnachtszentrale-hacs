@@ -1,15 +1,27 @@
 # Weihnachtszentrale
 
-v0.9.0 – Home-Assistant-Integration für Weihnachtsbeleuchtung mit optionalen Einschalteinstellungen pro Gerät. Automatisierte Regressionstests verwenden simulierte HA-Schnittstellen; reale Gerätefunktionen separat prüfen.
+Home Assistant Christmas lighting control with optional evening cover coordination. Current release: [v0.9.0](https://github.com/loskrachos/weihnachtszentrale-hacs/releases/tag/v0.9.0).
 
-Geräte, Zeitprofile und Saisonmodi im Dashboard konfigurieren. Lichtsteuerung läuft im Backend. Optionale Rollladenkoordination ist standardmäßig aus. Individuelle Automationen und Sicherheitsskripte werden ausdrücklich angebunden und bleiben in Home Assistant.
+Configure participants, morning/evening schedules, reduced/full seasons and opt-in light properties through the dashboard. The backend runs without an open dashboard. Configuration has separate Times and Devices pages; the interface is currently German.
 
-Ab HA2026.11.2. Unter Einstellungen → Marketplace dieses Repository als benutzerdefinierte Quelle der Kategorie Integration aufnehmen, Version installieren und HA neu starten. HACS ist seit HA2026.11 integriert; keine separate HACS-Installation nötig. Die Dashboard-Karte wird gemeinsam mit der Integration aktualisiert und im Ressourcen-Speichermodus automatisch registriert. Drei Kartenansichten bleiben: overview, configuration, actions.
+## Documentation and project tracking
 
-- [Einbau und Migration](docs/INSTALL.md)
-- [Rollladenfunktion und Grenzen](docs/COVERS.md)
-- [HACS und Architektur](docs/HACS.md)
+GitHub is the maintained project home. Previous external planning notes and the old private repository are historical archives; future development is tracked here.
 
-Noch keine Morgenöffnung, Partylogik oder Govee-Szenenauswahl. Die Integration bedient reale Aktoren und ersetzt keine unabhängige Sicherheitslogik. Lokale Tests verwenden simulierte HA-Schnittstellen. Erste Marketplace-Migration und individuelle Geräteanbindung gesondert prüfen.
+- [Current status, validation evidence and roadmap](docs/PROJECT_STATUS.md)
+- [Installation and migration](docs/INSTALL.md)
+- [Device turn-on settings](docs/DEVICE_OPTIONS.md)
+- [Cover coordination and limitations](docs/COVERS.md)
+- [Marketplace architecture](docs/HACS.md)
+- [Issues and feature requests](https://github.com/loskrachos/weihnachtszentrale-hacs/issues)
+- [Releases and updates](https://github.com/loskrachos/weihnachtszentrale-hacs/releases)
 
-[Einschalteinstellungen pro Gerät](docs/DEVICE_OPTIONS.md)
+## Installation
+
+Requires Home Assistant 2026.11.2 or newer. Add this repository through Settings → Marketplace, install the integration and restart HA. The integration bundles and registers its dashboard resource in storage mode. The current dashboard still requires three cards with view modes overview, configuration and actions; automatic sidebar navigation is tracked in [#5](https://github.com/loskrachos/weihnachtszentrale-hacs/issues/5).
+
+## Scope
+
+Evening cover coordination is optional and disabled by default. Individual automations and existing safety scripts remain in Home Assistant and must be connected explicitly. Party mode, morning cover opening and separate scene/script startup actions are not implemented. Advertised light effects are supported without vendor-specific code.
+
+Automated tests use simulated interfaces; distinguish those results from physical device acceptance. See the status document for confirmed observations and remaining checks. Do not publish private HA configuration or credentials.
