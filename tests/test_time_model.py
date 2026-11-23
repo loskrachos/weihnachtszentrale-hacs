@@ -171,7 +171,7 @@ def backend_scope():
     from test_engine import Engine
     from test_covers import Coordinator
     tree=ast.parse((ROOT/'__init__.py').read_text())
-    names={'validate_settings','async_setup_entry','async_unload_entry','ws_get','ws_save','ws_preview','ws_engine','ws_enable'}
+    names={'validate_settings','async_setup_entry','async_unload_entry','ws_get','ws_device_fields','ws_save','ws_preview','ws_engine','ws_enable'}
     nodes=[]
     for n in tree.body:
         if isinstance(n,ast.Assign) and any(isinstance(t,ast.Name) and t.id.startswith('_') for t in n.targets):nodes.append(n)
@@ -239,7 +239,7 @@ class BackendFlowTests(unittest.IsolatedAsyncioTestCase):
         await env['ws_save'](h,conn,{'id':1,'settings':config});self.assertFalse(errors)
         h.data.clear();await env['async_setup_entry'](h,object())
         self.assertEqual(h.data['weihnachtszentrale']['settings']['times']['morning_on']['twilight'],'astronomical')
-        await env['ws_preview'](h,conn,{'id':2,'settings':config});self.assertFalse(errors);self.assertEqual(results[-1][1]['model_version'],'0.8.0')
+        await env['ws_preview'](h,conn,{'id':2,'settings':config});self.assertFalse(errors);self.assertEqual(results[-1][1]['model_version'],'0.9.0')
         self.assertIn('T04:00',results[-1][1]['days'][0]['rules'][0]['at'])
     async def test_invalid_preview_and_unloaded(self):
         env=backend_scope();errors=[];conn=SimpleNamespace(send_error=lambda *a:errors.append(a))

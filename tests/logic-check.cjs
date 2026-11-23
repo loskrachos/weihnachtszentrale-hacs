@@ -9,7 +9,7 @@ set innerHTML(v){this.html=v;this.children=[]}
 attachShadow(){return new Element('shadow')}
 }
 let Card;
-vm.runInNewContext(fs.readFileSync(__dirname+'/../custom_components/weihnachtszentrale/frontend/weihnachtszentrale-card-v080.js','utf8'),{HTMLElement:Element,document:{createElement:t=>new Element(t)},customElements:{define:(n,c)=>Card=c},window:{},crypto:{randomUUID:()=> 'new-id'},alert:()=>{}});
+vm.runInNewContext(fs.readFileSync(__dirname+'/../custom_components/weihnachtszentrale/frontend/weihnachtszentrale-card-v090.js','utf8'),{HTMLElement:Element,document:{createElement:t=>new Element(t)},customElements:{define:(n,c)=>Card=c},window:{},crypto:{randomUUID:()=> 'new-id'},alert:()=>{}});
 const all=(e,p)=>[...(p(e)?[e]:[]),...e.children.flatMap(c=>all(c,p))];
 (async()=>{
 const time={event:'fixed',time:'06:30',offset:0};
@@ -18,19 +18,23 @@ const calls=[];const c=new Card();c.setConfig({view:'configuration'});c.config={
 await c._load();
 const find=p=>all(c._root,p),button=t=>find(x=>x.tag==='button'&&x.textContent===t)[0];
 const change=(e,v)=>{e.value=v;e.handlers.change()};
-change(find(x=>x.type==='time')[0],'07:45');change(find(x=>x.type==='number')[0],'-20');change(find(x=>x.tag==='select')[0],'reduced');
+change(find(x=>x.type==='time')[0],'07:45');change(find(x=>x.type==='number')[0],'-20');
+await button('Zeiten speichern').handlers.click();
+assert.equal(calls.find(x=>x.type==='weihnachtszentrale/save').scope,'times');
+button('💡 Geräte').handlers.click();
 const check=find(x=>x.type==='checkbox')[0];check.checked=false;check.handlers.change();
 const selects=find(x=>x.tag==='select');change(selects.at(-1),'switch.star');button('Gerät hinzufügen').handlers.click();
-await button('Einstellungen speichern').handlers.click();
-const saved=calls.find(x=>x.type==='weihnachtszentrale/save').settings;
-assert.equal(saved.times.morning_on.time,'07:45');assert.equal(saved.times.morning_on.offset,-20);assert.equal(saved.season,'reduced');assert.equal(saved.devices.length,2);assert.equal(saved.devices[0].enabled,false);
+await button('Geräteeinstellungen speichern').handlers.click();
+const saved=calls.filter(x=>x.type==='weihnachtszentrale/save').at(-1).settings;
+assert.equal(saved.times.morning_on.time,'07:45');assert.equal(saved.times.morning_on.offset,-20);assert.equal(saved.devices.length,2);assert.equal(saved.devices[0].enabled,false);
+assert.equal(calls.filter(x=>x.type==='weihnachtszentrale/save').at(-1).scope,'devices');
 button('Entfernen').handlers.click();assert.equal(c.settings.devices.length,1);
 await c._load();assert.equal(c.settings.season,'full');
 c._hass.connection.sendMessagePromise=async()=>{throw Error('Testfehler')};await c._load();assert.equal(c.error,'Testfehler');
 // Preview uses unsaved values and does not save; stale requests are ignored.
-const payload={model_version:'0.8.0',timezone:'Europe/Berlin',days:[{date:'2026-10-29',rules:[{key:'morning_on',at:'2026-10-29T06:30:00+01:00',warning:null}],warnings:[]}],devices:[]};
+const payload={model_version:'0.9.0',timezone:'Europe/Berlin',days:[{date:'2026-10-29',rules:[{key:'morning_on',at:'2026-10-29T06:30:00+01:00',warning:null}],warnings:[]}],devices:[]};
 c._hass.connection.sendMessagePromise=async m=>{calls.push(structuredClone(m));return payload};
-c.error='';c.render();const panel=c._root.querySelector('.preview');const previewButton=button('Vorschau berechnen');
+c.error='';c._section='times';c.render();const panel=c._root.querySelector('.preview');const previewButton=button('Vorschau berechnen');
 await c._calculatePreview(panel,previewButton);assert.equal(c.preview,payload);assert.equal(calls.at(-1).type,'weihnachtszentrale/preview');assert.equal(calls.at(-1).settings.season,'full');
 c._invalidatePreview();assert.equal(c.preview,null);
 let finish;c._hass.connection.sendMessagePromise=()=>new Promise(r=>finish=r);

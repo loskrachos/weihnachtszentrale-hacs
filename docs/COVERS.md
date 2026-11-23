@@ -1,4 +1,4 @@
-# Zusatz v0.8.0 – optionale, allgemeine Koordination
+# Zusatz v0.9.0 – optionale, allgemeine Koordination
 
 Standardmäßig deaktiviert. Im Konfigurations-Dashboard separat aktivieren und Ablaufzeit für wartende Anfragen wählen (Ausgangswert06:00). Deaktivieren verwirft wartende Aufträge ohne Bewegung; neue explizite Anfragen werden direkt ausgeführt. Individuelle HA-Automationen und vorhandene Sicherheitsprüfungen bleiben beim Nutzer. Keine automatische Anbindung oder universelle Sicherheitslösung. Die Ablaufzeit wird bei einer neuen Anfrage übernommen; bestehende Aufträge behalten ihre ursprüngliche Grenze. Historische feste06:00-Angaben unten sind durch diese Einstellbarkeit ersetzt.
 
@@ -18,7 +18,7 @@ Anforderungen werden im HA-Store gespeichert. Sie verfallen am nächsten06:00Uhr
 
 Während Pause werden vorgemerkte Fahrten nicht nachgeholt. NEUE Anfragen der weiterhin aktiven HA-Schließautomation werden dann wie ohne Weihnachtssteuerung ausgeführt; Pause ist keine dauerhafte Offenhaltefunktion. Modus Aus entfernt die weihnachtliche Licht-Sperre bei aktiver Automatik.
 
-Manuelle Rollladenbedienung bleibt möglich und verwirft ab v0.8.0 keine vorgemerkte Schließanforderung mehr. Auch eine geänderte gemeldete Position erhält den ursprünglichen Zielwert. Während die Lichter an sind, bleibt die manuell gewählte Position bestehen. Nach Licht-Aus wird der gespeicherte Schließwunsch ausgeführt. Ist der Rollladen bereits am Ziel oder weiter geschlossen, wird er nicht wieder geöffnet. Soll eine spätere Fahrt ausdrücklich entfallen, „Verwerfen“ auf der Übersicht verwenden. Ablaufzeit, Pause, Deaktivierung und Sicherheitsprüfungen bleiben wirksam.
+Manuelle Rollladenbedienung bleibt möglich und verwirft ab v0.9.0 keine vorgemerkte Schließanforderung mehr. Auch eine geänderte gemeldete Position erhält den ursprünglichen Zielwert. Während die Lichter an sind, bleibt die manuell gewählte Position bestehen. Nach Licht-Aus wird der gespeicherte Schließwunsch ausgeführt. Ist der Rollladen bereits am Ziel oder weiter geschlossen, wird er nicht wieder geöffnet. Soll eine spätere Fahrt ausdrücklich entfallen, „Verwerfen“ auf der Übersicht verwenden. Ablaufzeit, Pause, Deaktivierung und Sicherheitsprüfungen bleiben wirksam.
 
 Schalt-/Skriptfehler oder ein Neustart während der Befehlsübergabe verlangen eine Sichtprüfung; keine blinde Wiederholung. Auf Übersicht erscheint der Status. `blocked`/`timeout` eines Sicherheitsskripts sind kein Erfolg. Für einen bewusst erneuten Versuch dieselbe Schließanforderung erneut ausführen; Sicherheitsbedingungen werden dabei erneut geprüft.
 

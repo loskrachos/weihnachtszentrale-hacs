@@ -14,7 +14,7 @@ def scope():
  tree=ast.parse((COMPONENT/'frontend.py').read_text())
  env={'Path':Path,'urlsplit':urlsplit,'StaticPathConfig':lambda *args:args,
       '__file__':str(COMPONENT/'frontend.py'),'LOVELACE_DATA':'lovelace',
-      'HomeAssistantError':RuntimeError,'DOMAIN':'weihnachtszentrale','VERSION':'0.8.0'}
+      'HomeAssistantError':RuntimeError,'DOMAIN':'weihnachtszentrale','VERSION':'0.9.0'}
  nodes=[n for n in tree.body if isinstance(n,(ast.Assign,ast.FunctionDef,ast.AsyncFunctionDef))]
  exec(compile(ast.Module(body=nodes,type_ignores=[]),str(COMPONENT/'frontend.py'),'exec'),env)
  return env
@@ -53,8 +53,8 @@ class FrontendTests(unittest.IsolatedAsyncioTestCase):
  def test_all_runtime_assets_in_component(self):
   import json
   manifest=json.loads((COMPONENT/'manifest.json').read_text())
-  self.assertEqual(manifest['version'],'0.8.0')
-  self.assertTrue((COMPONENT/'frontend/weihnachtszentrale-card-v080.js').is_file())
+  self.assertEqual(manifest['version'],'0.9.0')
+  self.assertTrue((COMPONENT/'frontend/weihnachtszentrale-card-v090.js').is_file())
   self.assertTrue((ROOT/'hacs.json').is_file())
   self.assertIn('frontend',manifest['dependencies'])
 

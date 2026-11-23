@@ -1,9 +1,9 @@
-# v0.8.0 – Opt-in device turn-on settings
+# v0.9.0 – Structured configuration and separate field selection
 
-- Inspect advertised light capabilities without sending commands. A per-device button opens additional settings only where supported.
-- Opt into brightness, effect or RGB color or color temperature, and transition. Unselected properties are omitted from the service call.
-- Apply configured values once at turn-on, including when the light is already on. Saving changes during an active phase applies them once immediately. No repeated enforcement every 15 seconds or after restart.
-- Revalidate current capabilities; unsupported settings show an error and do not prevent normal turn-off.
-- Existing settings, lights and deferred cover requests remain compatible.
+Configuration now has two internal pages: Zeiten (central schedules/preview) and Geräte (participants, turn-on values and cover options). Tabs preserve unsaved drafts. Separate server-side save scopes prevent schedule saves from overwriting devices or the season, and device saves from overwriting central times.
 
-Automated tests use simulated HA/DOM interfaces. First real-device effect acceptance is pending. No preset is selected automatically. Separate scene/script/select startup actions are not included in this first part of #2. Update installation should follow completion of the current evening cover acceptance run.
+Additional device properties are selected in a labeled checkbox panel and persisted with “Feldauswahl speichern”. This operation only stores the field layout; it sends no light commands and leaves current runtime values unchanged. Selected value editors appear in the standard device form with aligned rows. Apply changed values or remove hidden values explicitly with “Geräteeinstellungen speichern”. Existing opted-in values remain visible without migration. Effect, RGB color and color temperature are alternatives.
+
+Dividers, stable field order, section icons and responsive alignment improve scanning. Existing dashboard cards remain compatible. Automatic sidebar navigation and seasonal visibility (#5) are not included.
+
+Automated tests use simulated HA/DOM interfaces. Device effect behavior still requires separate real-device acceptance. No new values are selected automatically during installation. Addresses #4.

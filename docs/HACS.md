@@ -1,4 +1,4 @@
-# Installation und Updates über HACS/Marketplace v0.8.0
+# Installation und Updates über HACS/Marketplace v0.9.0
 
 Erste öffentliche Vorabversion. Lokale Tests ersetzen keine Prüfung der eigenen HA-Migration. HA2026.11 oder neuer enthält HACS als Marketplace; diese Integration benötigt mindestens HA2026.11.2.
 

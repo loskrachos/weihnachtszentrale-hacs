@@ -1,11 +1,15 @@
 # Per-device turn-on settings
 
-Device capabilities are inspected from Home Assistant state attributes without sending device commands. After adding a supported light, “Weitere Einstellmöglichkeiten vorhanden” opens an optional editor. Select only the properties Christmas Central should control. Supported fields: brightness, one of effect/RGB color/color temperature, and transition if advertised by the entity. Switches and on/off-only lights keep the simple interface.
+## Configuration pages
 
-Changing a value is a draft until “Einstellungen speichern”. With the automation enabled and the light in its active scheduled phase, saving applies the selected values once immediately. Subsequent ticks and restarts do not repeatedly reset them. On an inactive phase only the next turn-on uses the new values. Turn-off always remains a plain turn_off request.
+“Zeiten” contains central morning/evening rules and the preview. “Geräte” contains participants, cover assignments and additional light values. Drafts survive switching between these internal pages. “Zeiten speichern” and “Geräteeinstellungen speichern” affect only their own section. Use the overview to change the Christmas season. Cover options retain their separate save button.
 
-Only opted-in fields are included in the light.turn_on call. Home Assistant or the device can still apply its own defaults to other attributes. Effect and static color settings are alternatives to avoid incompatible commands. Existing participant configurations need no migration. No effect or scene is chosen automatically.
+## Select fields, then set values
 
-Capabilities are revalidated before each new turn-on command. Removed effects or unsupported values become a visible error; turn-off remains available. Edit or clear the stored values to resolve the error. If a light exposes too little information while off, inspect again when its HA attributes become available.
+After adding and saving a light, advertised HA capabilities are inspected automatically. The optional “Weitere Einstellmöglichkeiten vorhanden” button opens a labeled checklist. Select brightness, transition, or one of effect/RGB/color temperature and press “Feldauswahl speichern”. This saves only which fields are displayed. It does not send commands or change currently applied values.
 
-Limits: only entity capabilities advertised through HA are discovered. Separate scene, select or script entities cannot reliably be assigned to a light automatically; selecting such alternative startup actions remains a later part of issue #2. The current Govee example exposes its presets through effect_list and needs no vendor-specific code. Saved targets still use normal light/switch entities. No arbitrary service data is accepted.
+The selected value editors then appear in the regular device form. Choose the values and press “Geräteeinstellungen speichern”. Removing fields also requires this device-save operation before their old runtime values are removed; until then the last saved light behavior remains active. The interface explicitly explains this separation. Values not set yet are omitted from commands. Existing opted-in values become visible automatically, preserving compatibility.
+
+During an active lighting phase, saving changed device values applies them once immediately. During an inactive phase the next scheduled turn-on uses them. Repeated timer ticks and restarts do not enforce them continuously. Turn-off remains a normal turn_off request. Capabilities are checked again at dispatch; unavailable properties show an error while normal turn-off remains possible.
+
+Only opted-in values are passed to HA. HA/device defaults can still affect other attributes. Separate scene/script/select actions remain outside this version; preset effects reported by the light work without vendor-specific code.

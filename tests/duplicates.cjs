@@ -9,11 +9,11 @@ set innerHTML(v){this.html=v;this.children=[]}
 attachShadow(){return new Element('shadow')}
 }
 let Card;
-vm.runInNewContext(fs.readFileSync(__dirname+'/../custom_components/weihnachtszentrale/frontend/weihnachtszentrale-card-v080.js','utf8'),{HTMLElement:Element,document:{createElement:t=>new Element(t)},customElements:{define:(n,c)=>Card=c},window:{},crypto:{randomUUID:()=> 'new-id'},alert:()=>{}});
+vm.runInNewContext(fs.readFileSync(__dirname+'/../custom_components/weihnachtszentrale/frontend/weihnachtszentrale-card-v090.js','utf8'),{HTMLElement:Element,document:{createElement:t=>new Element(t)},customElements:{define:(n,c)=>Card=c},window:{},crypto:{randomUUID:()=> 'new-id'},alert:()=>{}});
 const all=(e,p)=>[...(p(e)?[e]:[]),...e.children.flatMap(c=>all(c,p))];
 (async()=>{
 const time={event:'fixed',time:'06:30',offset:0};
-const c=new Card();c.config={view:'configuration'};c._root=new Element('shadow');
+const c=new Card();c.config={view:'configuration'};c._section='devices';c._root=new Element('shadow');
 c.settings={season:'full',times:Object.fromEntries(['morning_on','morning_off','evening_on','evening_off'].map(k=>[k,{...time}])),devices:[{id:'a',entity_id:'light.test_deckenleuchte',name:'Deckenleuchte 1',enabled:true,season:'full',profile:'both',cover:''}]};
 c._hass={states:{'light.test_deckenleuchte':{attributes:{friendly_name:'Deckenleuchte 1'}},'switch.other':{attributes:{friendly_name:'Deckenleuchte 1'}},'cover.window':{attributes:{}}}};
 const options=()=>all(c._root,e=>e.tag==='select').at(-1).children.map(e=>e.value);

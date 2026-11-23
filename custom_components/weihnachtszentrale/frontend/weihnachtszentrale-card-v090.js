@@ -1,4 +1,4 @@
-/* v0.8.0: configurable backend light control; no device IDs embedded. */
+/* v0.9.0: configurable backend light control; no device IDs embedded. */
 class WeihnachtszentraleCard extends HTMLElement {
   setConfig(config) {
     this.config=config||{};
@@ -27,7 +27,7 @@ class WeihnachtszentraleCard extends HTMLElement {
     try {
       this._invalidatePreview();
       this.settings = await this._hass.connection.sendMessagePromise({type:'weihnachtszentrale/get'});
-      this.error = '';this._dirty=false;
+      this.error = '';this._notice='';this._dirty=false;
     } catch (e) { this.error = String(e.message || e); }
     this.render();
     if(this.settings&&this._view()!=='configuration')await this._refreshActions();
@@ -67,7 +67,7 @@ class WeihnachtszentraleCard extends HTMLElement {
     try {
       const result=await this._hass.connection.sendMessagePromise({type:'weihnachtszentrale/preview',settings:JSON.parse(JSON.stringify(this.settings))});
       if(request!==this._previewRequest)return;
-      if(result.model_version!=='0.8.0')throw new Error('Backend v0.8.0 fehlt. Python-Dateien aktualisieren und Home Assistant neu starten.');
+      if(result.model_version!=='0.9.0')throw new Error('Backend v0.9.0 fehlt. Python-Dateien aktualisieren und Home Assistant neu starten.');
       this.preview=result;this._showPreview(panel);
     } catch(e) {
       if(request===this._previewRequest)panel.replaceChildren(this._el('p',{className:'error',text:String(e.message||e)}));
@@ -130,13 +130,15 @@ class WeihnachtszentraleCard extends HTMLElement {
     button.disabled=true;
     try{
       let payload=JSON.parse(JSON.stringify(this.settings));
+      const scope=this._view()==='overview'?'season':(this._section||'times')==='times'?'times':'devices';
+      if(scope==='devices')for(const d of payload.devices)if(d.fields){d.turn_on=Object.fromEntries(Object.entries(d.turn_on||{}).filter(([key])=>d.fields.includes(key)))}
       if(this._view()==='overview'){
         const latest=await this._hass.connection.sendMessagePromise({type:'weihnachtszentrale/get'});
         payload={...latest,season:payload.season};
       }
-      await this._hass.connection.sendMessagePromise({type:'weihnachtszentrale/save',settings:payload});
-      this.settings=payload;
-      this.error='';this._dirty=false;alert('Gespeichert');
+      await this._hass.connection.sendMessagePromise({type:'weihnachtszentrale/save',settings:payload,scope});
+      if(scope==='times'){this.settings.times=payload.times}else if(scope==='devices'){this.settings.devices=payload.devices}else this.settings=payload;
+      this.error='';this._notice='';this._dirty=false;alert('Gespeichert');
       if(this._view()!=='configuration')await this._refreshActions();
     }catch(e){this.error=String(e.message||e);this.render()}
     finally{button.disabled=false}
@@ -145,7 +147,7 @@ class WeihnachtszentraleCard extends HTMLElement {
     const panel=this._root?.querySelector('.engine-status');if(!panel)return;
     try{
       const data=await this._hass.connection.sendMessagePromise({type:'weihnachtszentrale/engine'});
-      if(data.model_version!=='0.8.0')throw new Error('Backend v0.8.0 fehlt.');
+      if(data.model_version!=='0.9.0')throw new Error('Backend v0.9.0 fehlt.');
       panel.replaceChildren(this._el('p',{text:data.enabled?'Automatik aktiv · läuft auch ohne geöffnetes Dashboard.':'Automatik pausiert · es werden keine Schaltbefehle gesendet.'}));
       panel.append(this._el('p',{className:'small',text:'Aktivieren wendet den gespeicherten Zeitplan sofort auf alle Geräte mit aktiver Teilnahme an. Pausieren stoppt die Automatik und lässt die Lichter unverändert. Modus Aus schaltet bei aktiver Automatik die teilnehmenden Lichter aus.'}));
       const button=this._el('button',{text:data.enabled?'Automatik pausieren':'Automatik aktivieren',className:'primary'});
@@ -218,63 +220,65 @@ class WeihnachtszentraleCard extends HTMLElement {
       effects:(a.supported_features&4)&&Array.isArray(a.effect_list)?a.effect_list.filter(x=>typeof x==='string'&&x.length):[],
       transition:!!(a.supported_features&32)};
   }
+  _fields(d){return d.fields??Object.keys(d.turn_on||{})}
   _extraSettings(d,box){
-    const cap=this._lightCapabilities(d.entity_id),saved=d.turn_on||{};
-    if(!cap.brightness&&!cap.rgb&&!cap.kelvin&&!cap.effects?.length&&!cap.transition&&!Object.keys(saved).length)return;
-    const button=this._el('button',{text:Object.keys(saved).length?'Übernommene Einstellungen bearbeiten':'Weitere Einstellmöglichkeiten vorhanden'});
-    const panel=this._el('div',{className:'extra-settings',hidden:true});
-    const build=()=>{
-      panel.replaceChildren();
-      panel.append(this._el('p',{className:'small',text:'Nur ausgewählte Werte beim Einschalten setzen. Änderungen werden mit „Einstellungen speichern“ übernommen und bei aktivem Licht sofort angewendet. Kein separater Testbefehl.'}));
-      const values=d.turn_on||{};
-      const update=(key,value)=>{d.turn_on={...(d.turn_on||{})};if(value===undefined)delete d.turn_on[key];else d.turn_on[key]=value;this._dirty=true;this._invalidatePreview()};
-      const numeric=(key,label,min,max,fallback)=>{
-        const active=this._el('input',{type:'checkbox',checked:key in values});
-        const number=this._el('input',{type:'number',min,max,value:String(values[key]??fallback),disabled:!(key in values)});
-        active.addEventListener('change',()=>{number.disabled=!active.checked;update(key,active.checked?Number(number.value):undefined)});
-        number.addEventListener('change',()=>{if(active.checked)update(key,Number(number.value))});
-        panel.append(this._field(label+' übernehmen',active),this._field(label,number));
-      };
-      if(cap.brightness)numeric('brightness_pct','Helligkeit (%)',1,100,100);
-      if(cap.transition)numeric('transition','Übergangszeit (Sekunden)',0,300,0);
-      const colorKeys=['effect','rgb_color','color_temp_kelvin'];
-      const current=colorKeys.find(k=>k in values)||'';
-      const modes=[['','Effekt / Farbe / Farbtemperatur unverändert lassen']];
-      if(cap.effects?.length)modes.push(['effect','Effekt übernehmen']);
-      if(cap.rgb)modes.push(['rgb_color','Farbe übernehmen']);
-      if(cap.kelvin)modes.push(['color_temp_kelvin','Farbtemperatur übernehmen']);
-      if(current&&!modes.some(x=>x[0]===current))modes.push([current,'Gespeicherte Einstellung nicht mehr verfügbar']);
-      const detail=this._el('div');
-      const show=(key)=>{
-        detail.replaceChildren();
-        if(key==='effect'){
-          const effects=cap.effects||[],old=d.turn_on?.effect;
-          const choices=[['','Effekt auswählen'],...effects.map(x=>[x,x])];
-          if(old&&!effects.includes(old))choices.push([old,old+' (nicht mehr verfügbar)']);
-          detail.append(this._field('Effekt',this._select(choices,old||'',v=>update('effect',v))));
-        }else if(key==='rgb_color'){
-          const rgb=d.turn_on?.rgb_color||[255,255,255];
-          const color=this._el('input',{type:'color',value:'#'+rgb.map(v=>v.toString(16).padStart(2,'0')).join('')});
-          color.addEventListener('change',()=>update('rgb_color',[1,3,5].map(i=>parseInt(color.value.slice(i,i+2),16))));
-          detail.append(this._field('Farbe',color));
-        }else if(key==='color_temp_kelvin'){
-          const kelvin=this._el('input',{type:'number',min:cap.min,max:cap.max,value:String(d.turn_on?.color_temp_kelvin??cap.min)});
-          kelvin.addEventListener('change',()=>update('color_temp_kelvin',Number(kelvin.value)));
-          detail.append(this._field('Farbtemperatur (Kelvin)',kelvin));
+    const cap=this._lightCapabilities(d.entity_id),current=this._fields(d);
+    const labels={brightness_pct:'Helligkeit',effect:'Effekt',rgb_color:'Farbe',color_temp_kelvin:'Farbtemperatur',transition:'Übergangszeit'};
+    const available={brightness_pct:cap.brightness,effect:!!cap.effects?.length,rgb_color:cap.rgb,color_temp_kelvin:cap.kelvin,transition:cap.transition};
+    if(!Object.values(available).some(Boolean)&&!current.length)return;
+    const row=this._el('div',{className:'device-section'});
+    const button=this._el('button',{text:current.length?'⚙ Zusatzfelder auswählen':'⚙ Weitere Einstellmöglichkeiten vorhanden'});
+    const selection=this._el('div',{className:'field-selection',hidden:true});
+    let chosen=[...current];const inputs={};
+    selection.append(this._el('p',{className:'small',text:'1. Felder auswählen und speichern. 2. Werte unten einstellen und Geräteeinstellungen speichern. Effekt, Farbe und Farbtemperatur sind Alternativen.'}));
+    for(const [key,label] of Object.entries(labels)){
+      if(!available[key]&&!current.includes(key))continue;
+      const check=this._el('input',{type:'checkbox',checked:chosen.includes(key),disabled:!available[key]&&!current.includes(key)});inputs[key]=check;
+      check.addEventListener('change',()=>{
+        chosen=chosen.filter(k=>k!==key);
+        if(check.checked){
+          if(['effect','rgb_color','color_temp_kelvin'].includes(key)){
+            chosen=chosen.filter(k=>!['effect','rgb_color','color_temp_kelvin'].includes(k));
+            for(const k of ['effect','rgb_color','color_temp_kelvin'])if(inputs[k]&&k!==key)inputs[k].checked=false;
+          }
+          chosen.push(key);
         }
-      };
-      panel.append(this._field('Farbgestaltung',this._select(modes,current,v=>{
-        for(const key of colorKeys)update(key,undefined);
-        if(v==='effect')update(v,'');
-        if(v==='rgb_color')update(v,[255,255,255]);
-        if(v==='color_temp_kelvin')update(v,cap.min);
-        show(v);
-      })),detail);show(current);
-      const reset=this._el('button',{text:'Nur Ein/Aus verwenden'});
-      reset.addEventListener('click',()=>{delete d.turn_on;this._dirty=true;this._invalidatePreview();build()});panel.append(reset);
-    };
-    button.addEventListener('click',()=>{panel.hidden=!panel.hidden;if(!panel.hidden)build()});
-    box.append(button,panel);
+      });
+      selection.append(this._field(label+(available[key]?'':' (derzeit nicht verfügbar)'),check));
+    }
+    const status=this._el('p',{className:'small'}),save=this._el('button',{text:'Feldauswahl speichern'});
+    save.addEventListener('click',async()=>{
+      save.disabled=true;try{
+        await this._hass.connection.sendMessagePromise({type:'weihnachtszentrale/device_fields',entity_id:d.entity_id,fields:chosen});
+        d.fields=[...chosen];selection.hidden=true;this._notice='Feldauswahl gespeichert. Werte und entfernte Zusatzfelder mit „Geräteeinstellungen speichern“ übernehmen.';this._dirty=true;this._invalidatePreview();this.render();
+      }catch(e){status.textContent=String(e.message||e)}finally{save.disabled=false}
+    });
+    const cancel=this._el('button',{text:'Abbrechen'});cancel.addEventListener('click',()=>{selection.hidden=true;chosen=[...this._fields(d)];for(const [key,input] of Object.entries(inputs))input.checked=chosen.includes(key)});
+    selection.append(this._el('div',{className:'actions'},[save,cancel]),status);
+    button.addEventListener('click',()=>selection.hidden=!selection.hidden);
+    row.append(button,selection);box.append(row);
+    if(!current.length)return;
+    const table=this._el('div',{className:'settings-table'});
+    table.append(this._el('h4',{text:'✨ Einschalteinstellungen'}));
+    const update=(key,value)=>{d.turn_on={...(d.turn_on||{}),[key]:value}};
+    for(const key of current){
+      let input;const value=d.turn_on?.[key];
+      if(key==='effect'){
+        const choices=[['','Effekt auswählen'],...(cap.effects||[]).map(x=>[x,x])];
+        if(value&&!choices.some(x=>x[0]===value))choices.push([value,value+' (nicht mehr verfügbar)']);
+        input=this._select(choices,value||'',v=>{if(!v){if(d.turn_on)delete d.turn_on.effect}else update(key,v)});
+      }else if(key==='rgb_color'){
+        input=this._el('input',{type:'color',value:'#'+(value||[255,255,255]).map(v=>v.toString(16).padStart(2,'0')).join('')});
+        input.addEventListener('change',()=>update(key,[1,3,5].map(i=>parseInt(input.value.slice(i,i+2),16))));
+      }else{
+        const bounds=key==='brightness_pct'?[1,100]:key==='transition'?[0,300]:[cap.min??1000,cap.max??40000];
+        input=this._el('input',{type:'number',min:bounds[0],max:bounds[1],value:value===undefined?'':String(value),placeholder:'Noch nicht festgelegt'});
+        input.addEventListener('change',()=>{if(input.value===''){if(d.turn_on)delete d.turn_on[key]}else update(key,Number(input.value))});
+      }
+      table.append(this._field(labels[key]+(key==='brightness_pct'?' (%)':key==='transition'?' (Sekunden)':key==='color_temp_kelvin'?' (Kelvin)':''),input));
+      if(value===undefined)table.append(this._el('p',{className:'small',text:'Noch kein gespeicherter Wert für '+labels[key]+'. Erst ein gewählter Wert wird angewendet.'}));
+    }
+    table.append(this._el('p',{className:'small',text:'Wirksame Lichtwerte ändern sich erst mit „Geräteeinstellungen speichern“. Das gilt auch beim Entfernen eines Zusatzfelds.'}));box.append(table);
   }
   _renderActionsPage(card){
     card.append(this._el('p',{className:'small',text:'Zeitplan der kommenden 24 Stunden. Die Liste bestätigt keine ausgeführten Schaltbefehle; Automatikstatus auf der Übersicht beachten.'}));
@@ -310,7 +314,7 @@ class WeihnachtszentraleCard extends HTMLElement {
       }
       const result=await this._hass.connection.sendMessagePromise({type:'weihnachtszentrale/actions',settings:JSON.parse(JSON.stringify(this.settings))});
       if(request!==this._actionRequest)return;
-      if(result.model_version!=='0.8.0')throw new Error('Backend v0.8.0 fehlt. Python-Dateien aktualisieren und Home Assistant neu starten.');
+      if(result.model_version!=='0.9.0')throw new Error('Backend v0.9.0 fehlt. Python-Dateien aktualisieren und Home Assistant neu starten.');
       this._actions=result;this._showActions(panel);
     }catch(e){if(request===this._actionRequest)panel.replaceChildren(this._el('p',{className:'error',text:String(e.message||e)}))}
   }
@@ -339,6 +343,12 @@ class WeihnachtszentraleCard extends HTMLElement {
       *,*::before,*::after{box-sizing:border-box}
       ha-card{display:block;width:100%;min-width:0;max-width:none;padding:16px}
       h2{font-size:1.15rem;margin:0 0 12px}h3{font-size:1rem;margin:18px 0 8px}
+      .config-tabs{display:flex;gap:8px;border-bottom:2px solid var(--divider-color);padding:8px 0 14px;margin-bottom:16px}
+      .device-section,.settings-table{border-top:1px solid var(--divider-color);margin-top:16px;padding-top:12px}
+      .settings-table>label{display:grid;grid-template-columns:minmax(150px,1fr) minmax(140px,2fr);align-items:center;border-bottom:1px solid var(--divider-color);padding:10px 0;margin:0;gap:16px}
+      .field-selection{border:1px solid var(--divider-color);padding:16px;border-radius:8px;margin-top:12px}
+      .field-selection>label{display:flex;flex-direction:row-reverse;justify-content:flex-end;gap:12px;padding:10px 0;border-bottom:1px solid var(--divider-color)}
+      h4{margin:0 0 12px}.entry>strong{font-size:1rem}.entry>p{margin:5px 0 12px}
       .grid{display:grid;width:100%;min-width:0;grid-template-columns:minmax(0,1fr);gap:10px}
       .grid>*{min-width:0}
       label{display:flex;min-width:0;flex-direction:column;gap:5px;font-size:.84rem;color:var(--secondary-text-color)}
@@ -355,18 +365,25 @@ class WeihnachtszentraleCard extends HTMLElement {
       .small{font-size:.8rem;color:var(--secondary-text-color);overflow-wrap:anywhere} .error{color:var(--error-color);overflow-wrap:anywhere}
       @container (min-width:600px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
       @container (min-width:1000px){.grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
-      @container (max-width:599px){.actions{align-items:stretch;flex-direction:column}.actions>select,.actions>button{width:100%;flex:none;max-width:100%}}
+      @container (max-width:599px){.settings-table>label{grid-template-columns:minmax(0,1fr);gap:6px}.actions{align-items:stretch;flex-direction:column}.actions>select,.actions>button{width:100%;flex:none;max-width:100%}}
     </style>`;
     const card=this._el('ha-card');this._root.append(card);
     const titles={overview:'Übersicht',configuration:'Konfiguration',actions:'Kommende Aktionen'};
-    card.append(this._el('h2',{text:'🎄 Weihnachtszentrale v0.8.0 – '+titles[this._view()]}));
+    card.append(this._el('h2',{text:'🎄 Weihnachtszentrale v0.9.0 – '+titles[this._view()]}));
     if(this.error)card.append(this._el('p',{className:'error',text:this.error}));
     if(!this.settings)return;
     if(this._view()==='overview'){this._renderOverview(card);return}
     if(this._view()==='actions'){this._renderActionsPage(card);return}
-    card.append(this._el('p',{className:'small',text:'Änderungen werden mit „Speichern“ dauerhaft und bei aktiver Automatik unmittelbar angewendet.'}));
-    card.append(this._field('Weihnachtsmodus',this._select([['off','Aus'],['reduced','Reduziert'],['full','Vollbetrieb']],this.settings.season,v=>this.settings.season=v)));
-    card.append(this._el('h3',{text:'Zentrale Zeiten'}));
+    const section=this._section||'times';
+    const navigation=this._el('div',{className:'config-tabs'});
+    for(const [key,label] of [['times','🕒 Zeiten'],['devices','💡 Geräte']]){
+      const tab=this._el('button',{text:label,className:key===section?'primary':''});
+      tab.addEventListener('click',()=>{this._section=key;this.render()});navigation.append(tab);
+    }card.append(navigation);
+    card.append(this._el('p',{className:'small',text:'Zeiten und Geräte werden getrennt gespeichert. Nicht gespeicherte Eingaben bleiben beim Seitenwechsel erhalten.'}));
+    if(this._notice)card.append(this._el('p',{className:'notice',text:this._notice}));
+    if(section==='times'){
+    card.append(this._el('h3',{text:'🕒 Zentrale Zeiten'}));
     const times=this._el('div',{className:'grid times'});
     for(const [key,name] of [['morning_on','Morgen an'],['morning_off','Morgen aus'],['evening_on','Abend an'],['evening_off','Abend aus']]) {
       const t=this.settings.times[key];t.twilight=t.twilight||'civil';const cell=this._el('div',{className:'entry'});
@@ -380,8 +397,9 @@ class WeihnachtszentraleCard extends HTMLElement {
       const off=this._el('input',{type:'number',min:-180,max:180,value:String(t.offset)});off.addEventListener('change',()=>t.offset=Number(off.value));
       cell.append(this._field('Sonnen-Offset (Minuten)',off));times.append(cell);
     }card.append(times);
+    }else{
     this._capabilitiesSignature=JSON.stringify(this.settings.devices.map(d=>this._lightCapabilities(d.entity_id)));
-    card.append(this._el('h3',{text:'Dekoelemente'}));
+    card.append(this._el('h3',{text:'💡 Dekoelemente'}));
     for(const d of this.settings.devices){
       const box=this._el('div',{className:'entry'});
       const title=this._el('strong',{text:d.name||d.entity_id});box.append(title);
@@ -406,16 +424,19 @@ class WeihnachtszentraleCard extends HTMLElement {
     const add=this._el('button',{text:'Gerät hinzufügen'});
     add.addEventListener('click',()=>this._addDevice(picker.value));
     row.append(picker,add);card.append(row);
-    const actions=this._el('div',{className:'actions'});const save=this._el('button',{text:'Einstellungen speichern',className:'primary'});const reload=this._el('button',{text:'Neu laden'});
+    }
+    const actions=this._el('div',{className:'actions'});const save=this._el('button',{text:section==='times'?'Zeiten speichern':'Geräteeinstellungen speichern',className:'primary'});const reload=this._el('button',{text:'Neu laden'});
     save.addEventListener('click',()=>this._saveSettings(save));
     reload.addEventListener('click',()=>this._load());actions.append(save,reload);card.append(actions);
-    card.append(this._el('div',{className:'cover-options'}));this._refreshCoverOptions();
+    if(section==='devices'){card.append(this._el('div',{className:'cover-options'}));this._refreshCoverOptions()}
+    if(section==='times'){
     card.append(this._el('h3',{text:'Zeitvorschau – heute und morgen'}));
     const previewButton=this._el('button',{text:'Vorschau berechnen'});
     const panel=this._el('div',{className:'preview'});
     previewButton.addEventListener('click',()=>this._calculatePreview(panel,previewButton));
     card.append(previewButton,panel);
     if(this.preview)this._showPreview(panel);
+    }
   }
   // Spanned HA sections can contain more than twelve grid columns.
   // "full" follows the complete section width; height follows the content.

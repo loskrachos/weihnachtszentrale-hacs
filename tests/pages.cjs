@@ -10,19 +10,20 @@ set innerHTML(v){this.html=v;this.children=[]}
 attachShadow(){return new Element('shadow')}
 }
 let Card;
-vm.runInNewContext(fs.readFileSync(__dirname+'/../custom_components/weihnachtszentrale/frontend/weihnachtszentrale-card-v080.js','utf8'),{HTMLElement:Element,document:{createElement:t=>new Element(t)},customElements:{define:(n,c)=>Card=c},window:{},crypto:{randomUUID:()=> 'new-id'},alert:()=>{},setInterval:(fn,ms)=>{timerFn=fn;return 1},clearInterval:()=>{timerFn=null}});
+vm.runInNewContext(fs.readFileSync(__dirname+'/../custom_components/weihnachtszentrale/frontend/weihnachtszentrale-card-v090.js','utf8'),{HTMLElement:Element,document:{createElement:t=>new Element(t)},customElements:{define:(n,c)=>Card=c},window:{},crypto:{randomUUID:()=> 'new-id'},alert:()=>{},setInterval:(fn,ms)=>{timerFn=fn;return 1},clearInterval:()=>{timerFn=null}});
 const all=(e,p)=>[...(p(e)?[e]:[]),...e.children.flatMap(c=>all(c,p))];
 (async()=>{
 const c=new Card();c._root=new Element('shadow');c._hass={states:{'light.tree':{state:'on',attributes:{}}}};
 const t={event:'fixed',time:'06:00',offset:0,twilight:'civil'};const settings={season:'full',devices:[{id:'1',entity_id:'light.tree',name:'Baum',enabled:true,profile:'both',season:'both',cover:''}],times:Object.fromEntries(['morning_on','morning_off','evening_on','evening_off'].map(k=>[k,{...t}]))};c.settings=structuredClone(settings);
 const allText=()=>all(c._root,e=>!!e.textContent).map(e=>e.textContent).join(' ');
 const groups=Array.from({length:6},(_,i)=>({at:'2026-10-30T'+String(i+6).padStart(2,'0')+':00:00+01:00',on:[{entity_id:'light.tree',name:'Baum',cover:''}],off:[]}));
-const data={model_version:'0.8.0',generated_at:'2026-10-30T05:00:00+01:00',until:'2026-10-31T05:00:00+01:00',timezone:'Europe/Berlin',actions:groups,warnings:[]};
+const data={model_version:'0.9.0',generated_at:'2026-10-30T05:00:00+01:00',until:'2026-10-31T05:00:00+01:00',timezone:'Europe/Berlin',actions:groups,warnings:[]};
 c.setConfig({view:'overview'});c.render();c._actions=data;c._showActions(c._root.querySelector('.action-list'));
 assert.equal(all(c._root,e=>e.className==='entry').length,4);assert(allText().includes('Baum'));assert(allText().includes('light.tree'));assert(!allText().includes('Zentrale Zeiten'));assert(allText().includes('Baum: An'));assert.equal(all(c._root,e=>e.tag==='a').length,0);
 c.setConfig({view:'actions'});c.render();c._actions=data;c._showActions(c._root.querySelector('.action-list'));assert.equal(all(c._root,e=>e.className==='entry').length,6);assert(!allText().includes('Modus speichern'));
 c._actions={...data,actions:[]};c._showActions(c._root.querySelector('.action-list'));assert(allText().includes('Keine weiteren Aktionen geplant'));
 c.setConfig({view:'configuration'});c.render();assert(allText().includes('Zentrale Zeiten'));assert(!allText().includes('Nächste vier Aktionen'));
+c._section='devices';c.render();
 const feedbackField=all(c._root,e=>e.children.some(x=>x.textContent==='Keine Zustandsrückmeldung (z. B. 433 MHz)'))[0];
 const feedbackBox=all(feedbackField,e=>e.type==='checkbox')[0];assert(feedbackBox);feedbackBox.checked=true;feedbackBox.handlers.change();assert.equal(c.settings.devices[0].no_feedback,true);
 c.setConfig({view:'overview'});c.render();assert(allText().includes('Ohne Zustandsrückmeldung'));assert(!allText().includes('Baum: An'));
@@ -43,7 +44,7 @@ c.settings=structuredClone(settings);c.setConfig({view:'overview'});
 let armed=false,activation=[];
 c._hass.connection.sendMessagePromise=async m=>{
   if(m.type==='weihnachtszentrale/enable'){armed=m.enabled;activation.push(m)}
-  return {model_version:'0.8.0',enabled:armed,errors:{'light.tree':'Testfehler'},history:[]};
+  return {model_version:'0.9.0',enabled:armed,errors:{'light.tree':'Testfehler'},history:[]};
 };
 c.render();await c._refreshEngine();
 assert(allText().includes('Automatik pausiert'));assert(allText().includes('Testfehler'));
@@ -57,12 +58,12 @@ let pendingCovers=[{cover:'cover.test',position:30,status:'waiting',message:'War
 c._hass.callService=async(domain,action,data)=>{
  assert.equal(domain,'weihnachtszentrale');assert.equal(action,'cancel_cover_close');assert.equal(data.cover_entity,'cover.test');pendingCovers=[];
 };
-c._hass.connection.sendMessagePromise=async()=>({model_version:'0.8.0',enabled:true,covers:{pending:pendingCovers,history:[]},errors:{},history:[]});
+c._hass.connection.sendMessagePromise=async()=>({model_version:'0.9.0',enabled:true,covers:{pending:pendingCovers,history:[]},errors:{},history:[]});
 await c._refreshEngine();assert(allText().includes('Ausstehende Rollladenfahrten'));assert(allText().includes('Wartet auf Licht-Aus'));
 const cancelCover=all(c._root,e=>e.tag==='button'&&e.textContent==='Verwerfen: cover.test')[0];
 await cancelCover.handlers.click();assert.equal(pendingCovers.length,0);assert(!allText().includes('Wartet auf Licht-Aus'));
 // Separate cover options do not mutate primary lighting settings.
-c.setConfig({view:'configuration'});let coverSettings={enabled:false,expiry:'06:00'};
+c.setConfig({view:'configuration'});c._section='devices';let coverSettings={enabled:false,expiry:'06:00'};
 c._hass.connection.sendMessagePromise=async m=>{
  if(m.type==='weihnachtszentrale/cover_options'){
   if(m.options)coverSettings=m.options;
@@ -76,19 +77,30 @@ const coverEnable=all(coverPanel,e=>e.tag==='input'&&e.type==='checkbox')[0];cov
 const coverExpiry=all(coverPanel,e=>e.tag==='input'&&e.type==='time')[0];coverExpiry.value='07:30';
 const saveOptions=all(coverPanel,e=>e.tag==='button'&&e.textContent==='Rollladeneinstellungen speichern')[0];
 await saveOptions.handlers.click();assert(coverSettings.enabled);assert.equal(coverSettings.expiry,'07:30');
-// Device capabilities are read without issuing device actions. Options are opt-in.
+// Field selection is a separate persisted operation; values appear in the main device form.
 c._hass.states['light.tree'].attributes={supported_color_modes:['rgb','color_temp'],supported_features:36,effect_list:['Christmas Tree','Christmas'],min_color_temp_kelvin:2000,max_color_temp_kelvin:9000};
-const advancedDevice=structuredClone(settings.devices[0]),advancedBox=new Element('box');c._extraSettings(advancedDevice,advancedBox);
-assert.equal(advancedBox.children[0].textContent,'Weitere Einstellmöglichkeiten vorhanden');
-assert.equal(advancedDevice.turn_on,undefined);const advancedPanel=advancedBox.children[1];assert(advancedPanel.hidden);
-advancedBox.children[0].handlers.click();assert(!advancedPanel.hidden);
-const field=(label)=>all(advancedPanel,e=>e.tag==='label'&&e.children[0]?.textContent===label)[0]?.children[1];
-const brightnessToggle=field('Helligkeit (%) übernehmen');brightnessToggle.checked=true;brightnessToggle.handlers.change();
-const brightnessValue=field('Helligkeit (%)');brightnessValue.value='40';brightnessValue.handlers.change();assert.equal(advancedDevice.turn_on.brightness_pct,40);
-const design=field('Farbgestaltung');design.value='effect';design.handlers.change();const effect=field('Effekt');effect.value='Christmas Tree';effect.handlers.change();assert.equal(advancedDevice.turn_on.effect,'Christmas Tree');
-design.value='rgb_color';design.handlers.change();assert(!('effect' in advancedDevice.turn_on));assert.deepEqual(Array.from(advancedDevice.turn_on.rgb_color),[255,255,255]);
-const colorValue=field('Farbe');colorValue.value='#ff0000';colorValue.handlers.change();assert.deepEqual(Array.from(advancedDevice.turn_on.rgb_color),[255,0,0]);
-const plainBox=new Element('box');c._extraSettings({...advancedDevice,entity_id:'switch.plain',turn_on:{}},plainBox);assert.equal(plainBox.children.length,0);
-const resetAdvanced=all(advancedPanel,e=>e.tag==='button'&&e.textContent==='Nur Ein/Aus verwenden')[0];resetAdvanced.handlers.click();assert.equal(advancedDevice.turn_on,undefined);
+c.settings=structuredClone(settings);c._section='devices';c.render();
+let fieldsMessage;c._hass.connection.sendMessagePromise=async m=>{if(m.type==='weihnachtszentrale/device_fields')fieldsMessage=m;return {saved:true}};
+const extraButton=all(c._root,e=>e.tag==='button'&&e.textContent==='⚙ Weitere Einstellmöglichkeiten vorhanden')[0];assert(extraButton);
+assert.equal(c.settings.devices[0].turn_on,undefined);extraButton.handlers.click();
+const selection=c._root.querySelector('.field-selection');assert(!selection.hidden);
+const selectedControl=(label)=>all(selection,e=>e.tag==='label'&&e.children[0]?.textContent===label)[0]?.children[1];
+const brightness=selectedControl('Helligkeit');brightness.checked=true;brightness.handlers.change();
+const effectChoice=selectedControl('Effekt');effectChoice.checked=true;effectChoice.handlers.change();
+const colorChoice=selectedControl('Farbe');colorChoice.checked=true;colorChoice.handlers.change();assert(!effectChoice.checked);
+effectChoice.checked=true;effectChoice.handlers.change();assert(!colorChoice.checked);
+assert.equal(c.settings.devices[0].turn_on,undefined);
+await all(selection,e=>e.tag==='button'&&e.textContent==='Feldauswahl speichern')[0].handlers.click();
+assert.equal(fieldsMessage.type,'weihnachtszentrale/device_fields');assert.equal(c.settings.devices[0].turn_on,undefined);
+const table=c._root.querySelector('.settings-table');assert(table);
+const field=(label)=>all(table,e=>e.tag==='label'&&e.children[0]?.textContent===label)[0]?.children[1];
+field('Helligkeit (%)').value='40';field('Helligkeit (%)').handlers.change();field('Effekt').value='Christmas Tree';field('Effekt').handlers.change();
+assert.equal(c.settings.devices[0].turn_on.effect,'Christmas Tree');assert.equal(c.settings.devices[0].turn_on.brightness_pct,40);
+all(c._root,e=>e.tag==='button'&&e.textContent==='🕒 Zeiten')[0].handlers.click();assert(!c._root.querySelector('.settings-table'));
+assert.equal(c.settings.devices[0].turn_on.effect,'Christmas Tree');
+all(c._root,e=>e.tag==='button'&&e.textContent==='💡 Geräte')[0].handlers.click();assert(c._root.querySelector('.settings-table'));
+const plainBox=new Element('box');c._extraSettings({entity_id:'switch.plain',fields:[],turn_on:{}},plainBox);assert.equal(plainBox.children.length,0);
+// Old opted-in values remain visible without a fields migration.
+assert.deepEqual(Array.from(c._fields({turn_on:{effect:'Christmas Tree'}})),['effect']);
 console.log('PASS B2 UI: three page modes, 4 vs all groups, IDs and empty state, event filters/legacy values, latest saved data, stale-response rejection, mode save preserves config, timer cleanup. Simulated DOM only.');
 })().catch(e=>{console.error(e);process.exit(1)});

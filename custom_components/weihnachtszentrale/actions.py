@@ -31,6 +31,6 @@ def build_actions(settings, now, timezone_name, solar_event):
     warnings = []
     for day in preview['days']:
         warnings.extend(f"{day['date']}: {w}" for w in day['warnings'])
-    return {'model_version': '0.8.0', 'read_only': True, 'generated_at': now.astimezone(tz).isoformat(),
+    return {'model_version': '0.9.0', 'read_only': True, 'generated_at': now.astimezone(tz).isoformat(),
             'until': until.astimezone(tz).isoformat(), 'actions': actions,
             'warnings': list(dict.fromkeys(warnings)), 'devices': preview['devices']}

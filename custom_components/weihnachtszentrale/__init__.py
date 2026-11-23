@@ -49,7 +49,7 @@ def validate_settings(value: dict) -> dict:
     seen = set()
     clean = []
     for d in devices:
-        if not isinstance(d, dict) or (not {"id", "entity_id", "name", "enabled", "season", "profile", "cover"} <= set(d) or set(d) - {"id", "entity_id", "name", "enabled", "season", "profile", "cover", "no_feedback", "turn_on"}):
+        if not isinstance(d, dict) or (not {"id", "entity_id", "name", "enabled", "season", "profile", "cover"} <= set(d) or set(d) - {"id", "entity_id", "name", "enabled", "season", "profile", "cover", "no_feedback", "turn_on", "fields"}):
             raise vol.Invalid("Invalid device entry")
         entity_id = d["entity_id"]
         if not isinstance(entity_id, str) or not _ENTITY.fullmatch(entity_id) or entity_id in seen:
@@ -65,6 +65,13 @@ def validate_settings(value: dict) -> dict:
             or d["season"] not in ("full", "both")
             or d["profile"] not in ("morning", "evening", "both")):
             raise vol.Invalid("Invalid device fields")
+        if 'fields' in d:
+            fields = d['fields']
+            if (not isinstance(fields, list) or any(not isinstance(k, str) or k not in
+                ('brightness_pct', 'effect', 'rgb_color', 'color_temp_kelvin', 'transition') for k in fields)
+                or len(fields) != len(set(fields)) or (fields and not entity_id.startswith('light.'))
+                or sum(k in fields for k in ('effect','rgb_color','color_temp_kelvin')) > 1):
+                raise vol.Invalid('Ungültige Feldauswahl')
         if 'turn_on' in d:
             try:
                 validate_turn_on(d['turn_on'], entity_id)
@@ -94,6 +101,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     await async_setup_frontend(hass)
     websocket_api.async_register_command(hass, ws_get)
     websocket_api.async_register_command(hass, ws_save)
+    websocket_api.async_register_command(hass, ws_device_fields)
     websocket_api.async_register_command(hass, ws_preview)
     websocket_api.async_register_command(hass, ws_actions)
     websocket_api.async_register_command(hass, ws_engine)
@@ -157,7 +165,7 @@ async def ws_get(hass, connection, msg):
     connection.send_result(msg["id"], deepcopy(runtime["settings"]))
 
 
-@websocket_api.websocket_command({vol.Required("type"): "weihnachtszentrale/save", vol.Required("settings"): dict})
+@websocket_api.websocket_command({vol.Required("type"): "weihnachtszentrale/save", vol.Required("settings"): dict, vol.Optional("scope", default="all"): vol.In(("all","times","devices","season"))})
 @websocket_api.require_admin
 @websocket_api.async_response
 async def ws_save(hass, connection, msg):
@@ -165,18 +173,51 @@ async def ws_save(hass, connection, msg):
     if runtime is None:
         connection.send_error(msg["id"], "not_loaded", "Integration not configured")
         return
-    try:
-        settings = validate_settings(msg["settings"])
-    except (vol.Invalid, TypeError, ValueError) as exc:
-        connection.send_error(msg["id"], "invalid_settings", str(exc))
-        return
     async with runtime["lock"]:
+        try:
+            scope = msg.get('scope', 'all')
+            if scope not in ('all','times','devices','season'):
+                raise vol.Invalid('Ungültiger Speicherbereich')
+            proposed = msg['settings']
+            if scope != 'all':
+                proposed = {**runtime['settings'], scope: proposed[scope]}
+            settings = validate_settings(proposed)
+        except (vol.Invalid, TypeError, ValueError, KeyError) as exc:
+            connection.send_error(msg["id"], "invalid_settings", str(exc))
+            return
         await runtime["store"].async_save(settings)
         runtime["settings"] = settings
         async_dispatcher_send(hass, SIGNAL_SETTINGS_CHANGED)
         if 'engine' in runtime:
             await runtime['engine']._tick()
     connection.send_result(msg["id"], {"saved": True})
+
+
+@websocket_api.websocket_command({vol.Required('type'): 'weihnachtszentrale/device_fields',
+    vol.Required('entity_id'): str, vol.Required('fields'): list})
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_device_fields(hass, connection, msg):
+    """Persist UI field selection only; never apply light values or tick the engine."""
+    runtime = hass.data.get(DOMAIN)
+    if runtime is None:
+        connection.send_error(msg['id'], 'not_loaded', 'Integration not configured')
+        return
+    async with runtime['lock']:
+        proposed = deepcopy(runtime['settings'])
+        device = next((d for d in proposed['devices'] if d['entity_id'] == msg['entity_id']), None)
+        if device is None:
+            connection.send_error(msg['id'], 'device_not_saved', 'Bitte das neue Gerät zuerst speichern.')
+            return
+        device['fields'] = msg['fields']
+        try:
+            proposed = validate_settings(proposed)
+        except (vol.Invalid, TypeError, ValueError) as exc:
+            connection.send_error(msg['id'], 'invalid_fields', str(exc))
+            return
+        await runtime['store'].async_save(proposed)
+        runtime['settings'] = proposed
+    connection.send_result(msg['id'], {'saved': True})
 
 
 @websocket_api.websocket_command({vol.Required("type"): "weihnachtszentrale/preview", vol.Required("settings"): dict})

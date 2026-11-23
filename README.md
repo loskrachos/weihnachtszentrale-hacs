@@ -1,6 +1,6 @@
 # Weihnachtszentrale
 
-v0.8.0 – Home-Assistant-Integration für Weihnachtsbeleuchtung mit optionalen Einschalteinstellungen pro Gerät. Automatisierte Regressionstests verwenden simulierte HA-Schnittstellen; reale Gerätefunktionen separat prüfen.
+v0.9.0 – Home-Assistant-Integration für Weihnachtsbeleuchtung mit optionalen Einschalteinstellungen pro Gerät. Automatisierte Regressionstests verwenden simulierte HA-Schnittstellen; reale Gerätefunktionen separat prüfen.
 
 Geräte, Zeitprofile und Saisonmodi im Dashboard konfigurieren. Lichtsteuerung läuft im Backend. Optionale Rollladenkoordination ist standardmäßig aus. Individuelle Automationen und Sicherheitsskripte werden ausdrücklich angebunden und bleiben in Home Assistant.
 
