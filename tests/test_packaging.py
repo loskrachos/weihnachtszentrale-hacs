@@ -35,7 +35,7 @@ class PackagingTests(unittest.TestCase):
             os.utime(source, (old_time, old_time))
             py_compile.compile(str(source), doraise=True)
             # The broken packaging leaves old bytecode valid after a same-size edit.
-            source.write_text("VERSION = '0.7.0'\n")
+            source.write_text("VERSION = '0.7.1'\n")
             os.utime(source, (old_time, old_time))
             loader = importlib.util.spec_from_file_location('sample', source).loader
             values = {}
@@ -47,4 +47,4 @@ class PackagingTests(unittest.TestCase):
             os.utime(source, (new_time, new_time))
             values = {}
             exec(loader.get_code('sample'), values)
-            self.assertEqual(values['VERSION'], '0.7.0')
+            self.assertEqual(values['VERSION'], '0.7.1')

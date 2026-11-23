@@ -48,7 +48,7 @@ def validate_settings(value: dict) -> dict:
     seen = set()
     clean = []
     for d in devices:
-        if not isinstance(d, dict) or set(d) != {"id", "entity_id", "name", "enabled", "season", "profile", "cover"}:
+        if not isinstance(d, dict) or (not {"id", "entity_id", "name", "enabled", "season", "profile", "cover"} <= set(d) or set(d) - {"id", "entity_id", "name", "enabled", "season", "profile", "cover", "no_feedback"}):
             raise vol.Invalid("Invalid device entry")
         entity_id = d["entity_id"]
         if not isinstance(entity_id, str) or not _ENTITY.fullmatch(entity_id) or entity_id in seen:
@@ -60,6 +60,7 @@ def validate_settings(value: dict) -> dict:
         if (not isinstance(d["id"], str) or len(d["id"]) > 100
             or not isinstance(d["name"], str) or len(d["name"]) > 100
             or type(d["enabled"]) is not bool
+            or type(d.get("no_feedback", False)) is not bool
             or d["season"] not in ("full", "both")
             or d["profile"] not in ("morning", "evening", "both")):
             raise vol.Invalid("Invalid device fields")

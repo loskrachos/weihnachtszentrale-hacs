@@ -10,19 +10,23 @@ set innerHTML(v){this.html=v;this.children=[]}
 attachShadow(){return new Element('shadow')}
 }
 let Card;
-vm.runInNewContext(fs.readFileSync(__dirname+'/../custom_components/weihnachtszentrale/frontend/weihnachtszentrale-card-v070.js','utf8'),{HTMLElement:Element,document:{createElement:t=>new Element(t)},customElements:{define:(n,c)=>Card=c},window:{},crypto:{randomUUID:()=> 'new-id'},alert:()=>{},setInterval:(fn,ms)=>{timerFn=fn;return 1},clearInterval:()=>{timerFn=null}});
+vm.runInNewContext(fs.readFileSync(__dirname+'/../custom_components/weihnachtszentrale/frontend/weihnachtszentrale-card-v071.js','utf8'),{HTMLElement:Element,document:{createElement:t=>new Element(t)},customElements:{define:(n,c)=>Card=c},window:{},crypto:{randomUUID:()=> 'new-id'},alert:()=>{},setInterval:(fn,ms)=>{timerFn=fn;return 1},clearInterval:()=>{timerFn=null}});
 const all=(e,p)=>[...(p(e)?[e]:[]),...e.children.flatMap(c=>all(c,p))];
 (async()=>{
 const c=new Card();c._root=new Element('shadow');c._hass={states:{'light.tree':{state:'on',attributes:{}}}};
 const t={event:'fixed',time:'06:00',offset:0,twilight:'civil'};const settings={season:'full',devices:[{id:'1',entity_id:'light.tree',name:'Baum',enabled:true,profile:'both',season:'both',cover:''}],times:Object.fromEntries(['morning_on','morning_off','evening_on','evening_off'].map(k=>[k,{...t}]))};c.settings=structuredClone(settings);
 const allText=()=>all(c._root,e=>!!e.textContent).map(e=>e.textContent).join(' ');
 const groups=Array.from({length:6},(_,i)=>({at:'2026-10-30T'+String(i+6).padStart(2,'0')+':00:00+01:00',on:[{entity_id:'light.tree',name:'Baum',cover:''}],off:[]}));
-const data={model_version:'0.7.0',generated_at:'2026-10-30T05:00:00+01:00',until:'2026-10-31T05:00:00+01:00',timezone:'Europe/Berlin',actions:groups,warnings:[]};
+const data={model_version:'0.7.1',generated_at:'2026-10-30T05:00:00+01:00',until:'2026-10-31T05:00:00+01:00',timezone:'Europe/Berlin',actions:groups,warnings:[]};
 c.setConfig({view:'overview'});c.render();c._actions=data;c._showActions(c._root.querySelector('.action-list'));
 assert.equal(all(c._root,e=>e.className==='entry').length,4);assert(allText().includes('Baum'));assert(allText().includes('light.tree'));assert(!allText().includes('Zentrale Zeiten'));assert(allText().includes('Baum: An'));assert.equal(all(c._root,e=>e.tag==='a').length,0);
 c.setConfig({view:'actions'});c.render();c._actions=data;c._showActions(c._root.querySelector('.action-list'));assert.equal(all(c._root,e=>e.className==='entry').length,6);assert(!allText().includes('Modus speichern'));
 c._actions={...data,actions:[]};c._showActions(c._root.querySelector('.action-list'));assert(allText().includes('Keine weiteren Aktionen geplant'));
 c.setConfig({view:'configuration'});c.render();assert(allText().includes('Zentrale Zeiten'));assert(!allText().includes('Nächste vier Aktionen'));
+const feedbackField=all(c._root,e=>e.children.some(x=>x.textContent==='Keine Zustandsrückmeldung (z. B. 433 MHz)'))[0];
+const feedbackBox=all(feedbackField,e=>e.type==='checkbox')[0];assert(feedbackBox);feedbackBox.checked=true;feedbackBox.handlers.change();assert.equal(c.settings.devices[0].no_feedback,true);
+c.setConfig({view:'overview'});c.render();assert(allText().includes('Ohne Zustandsrückmeldung'));assert(!allText().includes('Baum: An'));
+c.settings=structuredClone(settings);c.setConfig({view:'configuration'});c.render();
 const morning=c._eventOptions('morning_on','fixed').map(x=>x[0]);assert.deepEqual(morning,['fixed','sunrise','dawn']);const evening=c._eventOptions('evening_on','fixed').map(x=>x[0]);assert.deepEqual(evening,['fixed','sunset','dusk']);assert(c._eventOptions('morning_on','sunset').some(x=>x[0]==='sunset'&&x[1].includes('bestehende')));
 // Refresh reads latest saved configuration; old responses never replace new ones.
 c.setConfig({view:'actions'});c.render();c._dirty=false;const changed={...settings,season:'reduced'};let messages=[];
@@ -39,7 +43,7 @@ c.settings=structuredClone(settings);c.setConfig({view:'overview'});
 let armed=false,activation=[];
 c._hass.connection.sendMessagePromise=async m=>{
   if(m.type==='weihnachtszentrale/enable'){armed=m.enabled;activation.push(m)}
-  return {model_version:'0.7.0',enabled:armed,errors:{'light.tree':'Testfehler'},history:[]};
+  return {model_version:'0.7.1',enabled:armed,errors:{'light.tree':'Testfehler'},history:[]};
 };
 c.render();await c._refreshEngine();
 assert(allText().includes('Automatik pausiert'));assert(allText().includes('Testfehler'));
@@ -53,7 +57,7 @@ let pendingCovers=[{cover:'cover.test',position:30,status:'waiting',message:'War
 c._hass.callService=async(domain,action,data)=>{
  assert.equal(domain,'weihnachtszentrale');assert.equal(action,'cancel_cover_close');assert.equal(data.cover_entity,'cover.test');pendingCovers=[];
 };
-c._hass.connection.sendMessagePromise=async()=>({model_version:'0.7.0',enabled:true,covers:{pending:pendingCovers,history:[]},errors:{},history:[]});
+c._hass.connection.sendMessagePromise=async()=>({model_version:'0.7.1',enabled:true,covers:{pending:pendingCovers,history:[]},errors:{},history:[]});
 await c._refreshEngine();assert(allText().includes('Ausstehende Rollladenfahrten'));assert(allText().includes('Wartet auf Licht-Aus'));
 const cancelCover=all(c._root,e=>e.tag==='button'&&e.textContent==='Verwerfen: cover.test')[0];
 await cancelCover.handlers.click();assert.equal(pendingCovers.length,0);assert(!allText().includes('Wartet auf Licht-Aus'));

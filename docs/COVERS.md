@@ -1,4 +1,4 @@
-# Zusatz v0.7.0 – optionale, allgemeine Koordination
+# Zusatz v0.7.1 – optionale, allgemeine Koordination
 
 Standardmäßig deaktiviert. Im Konfigurations-Dashboard separat aktivieren und Ablaufzeit für wartende Anfragen wählen (Ausgangswert06:00). Deaktivieren verwirft wartende Aufträge ohne Bewegung; neue explizite Anfragen werden direkt ausgeführt. Individuelle HA-Automationen und vorhandene Sicherheitsprüfungen bleiben beim Nutzer. Keine automatische Anbindung oder universelle Sicherheitslösung. Die Ablaufzeit wird bei einer neuen Anfrage übernommen; bestehende Aufträge behalten ihre ursprüngliche Grenze. Historische feste06:00-Angaben unten sind durch diese Einstellbarkeit ersetzt.
 

@@ -34,7 +34,10 @@ def targets(settings, now, timezone_name, solar_event):
         boundary = active or (before, after)
         token = json.dumps([device['reason'], config['profile'],
                             [v.isoformat() if v else None for v in boundary]], sort_keys=True)
-        result[device['entity_id']] = {'on': active is not None, 'token': token}
+        if config.get('no_feedback', False):
+            token += ':no_feedback'
+        result[device['entity_id']] = {'on': active is not None, 'token': token,
+                                        'no_feedback': config.get('no_feedback', False)}
     return result
 
 
@@ -60,7 +63,7 @@ class LightEngine:
     def status(self):
         return {'enabled': self.state['enabled'], 'errors': deepcopy(self.errors),
                 'history': deepcopy(self.history), 'last_checked': self.last_checked,
-                'model_version': '0.7.0', 'covers': self.covers.status() if self.covers else {}}
+                'model_version': '0.7.1', 'covers': self.covers.status() if self.covers else {}}
 
     async def enable(self, enabled):
         async with self.lock:
@@ -110,12 +113,12 @@ class LightEngine:
             if self.state['phases'].get(entity_id) == target['token']:
                 continue
             actual = self.hass.states.get(entity_id)
-            if actual is None or actual.state in ('unknown', 'unavailable'):
+            if actual is None or (not target['no_feedback'] and actual.state in ('unknown', 'unavailable')):
                 self.errors[entity_id] = 'Nicht erreichbar; erneuter Versuch alle 15 Sekunden.'
                 continue
             desired = 'on' if target['on'] else 'off'
             try:
-                if actual.state != desired:
+                if target['no_feedback'] or actual.state != desired:
                     await asyncio.wait_for(self.hass.services.async_call(
                         entity_id.split('.')[0], 'turn_' + desired,
                         {'entity_id': entity_id}, blocking=True), timeout=20)

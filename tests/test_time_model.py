@@ -208,6 +208,13 @@ class SchemaTests(unittest.TestCase):
     def test_duplicate_entity(self):
         s=settings();s['devices'].append({**s['devices'][0],'id':'2'})
         with self.assertRaises(Invalid):self.validate(s)
+    def test_optional_no_feedback_is_strict_boolean(self):
+        for value in (True,False):
+            s=settings();s['devices'][0]['no_feedback']=value
+            self.assertEqual(self.validate(s)['devices'][0]['no_feedback'],value)
+        for value in ('true',1,None):
+            s=settings();s['devices'][0]['no_feedback']=value
+            with self.assertRaises(Invalid):self.validate(s)
     def test_invalid_offset(self):
         for value in (181,-181,True,1.5):
             s=settings();s['times']['morning_on']['offset']=value
@@ -232,7 +239,7 @@ class BackendFlowTests(unittest.IsolatedAsyncioTestCase):
         await env['ws_save'](h,conn,{'id':1,'settings':config});self.assertFalse(errors)
         h.data.clear();await env['async_setup_entry'](h,object())
         self.assertEqual(h.data['weihnachtszentrale']['settings']['times']['morning_on']['twilight'],'astronomical')
-        await env['ws_preview'](h,conn,{'id':2,'settings':config});self.assertFalse(errors);self.assertEqual(results[-1][1]['model_version'],'0.7.0')
+        await env['ws_preview'](h,conn,{'id':2,'settings':config});self.assertFalse(errors);self.assertEqual(results[-1][1]['model_version'],'0.7.1')
         self.assertIn('T04:00',results[-1][1]['days'][0]['rules'][0]['at'])
     async def test_invalid_preview_and_unloaded(self):
         env=backend_scope();errors=[];conn=SimpleNamespace(send_error=lambda *a:errors.append(a))

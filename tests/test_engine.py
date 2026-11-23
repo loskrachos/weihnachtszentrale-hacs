@@ -81,6 +81,44 @@ class EngineTests(unittest.IsolatedAsyncioTestCase):
         self.at(17); await self.engine.enable(True); await self.engine.enable(False)
         self.at(23); await self.engine.tick(); self.assertEqual(len(self.calls),1)
         await self.engine.enable(True); self.assertEqual(self.calls[-1][1],'turn_off')
+    async def test_no_feedback_unknown_sends_once_and_survives_restart(self):
+        self.config['devices'][0]['no_feedback']=True
+        self.actual['light.tree'].state='unknown'
+        async def transmit(domain, action, data, blocking):
+            self.calls.append((domain,action,data))
+        self.hass.services.async_call=transmit
+        self.at(17); await self.engine.enable(True)
+        for _ in range(4): await self.engine.tick()
+        replacement=self.make(); await replacement.load(); await replacement.tick()
+        self.assertEqual([c[1] for c in self.calls],['turn_on'])
+        self.at(23); await replacement.tick(); await replacement.tick()
+        self.assertEqual([c[1] for c in self.calls],['turn_on','turn_off'])
+        self.assertFalse(replacement.errors)
+    async def test_no_feedback_ignores_assumed_matching_state(self):
+        self.config['devices'][0]['no_feedback']=True
+        self.actual['light.tree'].state='on'
+        self.at(17); await self.engine.enable(True)
+        self.assertEqual(len(self.calls),1)
+    async def test_no_feedback_unavailable_attempts_service(self):
+        self.config['devices'][0]['no_feedback']=True
+        self.actual['light.tree'].state='unavailable'
+        self.at(17); await self.engine.enable(True)
+        self.assertEqual(len(self.calls),1)
+    async def test_no_feedback_missing_entity_stays_error(self):
+        self.config['devices'][0]['no_feedback']=True
+        self.actual.clear(); self.at(17); await self.engine.enable(True)
+        self.assertFalse(self.calls); self.assertIn('light.tree',self.engine.errors)
+    async def test_enable_no_feedback_reconciles_once(self):
+        self.at(17); await self.engine.enable(True)
+        self.config['devices'][0]['no_feedback']=True
+        await self.engine.tick(); await self.engine.tick()
+        self.assertEqual(len(self.calls),2)
+    async def test_no_feedback_service_failure_is_not_completed(self):
+        self.config['devices'][0]['no_feedback']=True
+        self.failure=True; self.at(17); await self.engine.enable(True)
+        self.assertIn('light.tree',self.engine.errors)
+        self.failure=False; await self.engine.tick(); await self.engine.tick()
+        self.assertEqual(len(self.calls),2); self.assertFalse(self.engine.errors)
     async def test_unavailable_retry_current_plan(self):
         self.at(17); self.actual['light.tree'].state='unavailable'; await self.engine.enable(True)
         self.assertIn('light.tree',self.engine.errors); self.assertFalse(self.calls)
@@ -156,6 +194,6 @@ class BackendLifecycleTests(unittest.IsolatedAsyncioTestCase):
         result=[];conn=SimpleNamespace(send_result=lambda *x:result.append(x),send_error=lambda *x:None)
         await env['ws_enable'](h,conn,{'id':1,'enabled':False})
         self.assertFalse(result[-1][1]['enabled'])
-        await env['ws_engine'](h,conn,{'id':2});self.assertEqual(result[-1][1]['model_version'],'0.7.0')
+        await env['ws_engine'](h,conn,{'id':2});self.assertEqual(result[-1][1]['model_version'],'0.7.1')
         await env['async_unload_entry'](h,object());self.assertEqual(set(cancelled),{'timer','start','manual'})
         await callbacks['timer'](None);self.assertEqual(len(calls),1)

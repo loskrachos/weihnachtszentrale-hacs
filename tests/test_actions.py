@@ -75,7 +75,7 @@ class ActionCommandTests(unittest.IsolatedAsyncioTestCase):
         tree=ast.parse((ROOT/'__init__.py').read_text());node=next(x for x in tree.body if isinstance(x,ast.AsyncFunctionDef) and x.name=='ws_actions');node.decorator_list=[]
         exec(compile(ast.Module(body=[node],type_ignores=[]),str(ROOT/'__init__.py'),'exec'),scope)
         result=[];errors=[];conn=SimpleNamespace(send_result=lambda *x:result.append(x),send_error=lambda *x:errors.append(x));h=SimpleNamespace(data={'weihnachtszentrale':{}},config=SimpleNamespace(time_zone='Europe/Berlin'))
-        await scope['ws_actions'](h,conn,{'id':1,'settings':settings()});self.assertFalse(errors);self.assertEqual(result[-1][1]['model_version'],'0.7.0');self.assertTrue(result[-1][1]['read_only'])
+        await scope['ws_actions'](h,conn,{'id':1,'settings':settings()});self.assertFalse(errors);self.assertEqual(result[-1][1]['model_version'],'0.7.1');self.assertTrue(result[-1][1]['read_only'])
         bad=settings();bad['devices'].append(deepcopy(bad['devices'][0]));await scope['ws_actions'](h,conn,{'id':2,'settings':bad});self.assertEqual(errors[-1][1],'invalid_settings')
         h.data.clear();await scope['ws_actions'](h,conn,{'id':3,'settings':settings()});self.assertEqual(errors[-1][1],'not_loaded')
 

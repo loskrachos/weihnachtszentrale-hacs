@@ -1,8 +1,7 @@
-# v0.7.0 – erste HACS-/Marketplace-Version
+# v0.7.1 – Geräte ohne Zustandsrückmeldung
 
-- Frontend im Integrationsordner gebündelt und automatische Ressourcenmigration für HA2026.11.2 im Speichermodus.
-- HACS-Metadaten und Entwurfs-Releaseworkflow vorbereitet.
-- Rollladenkoordination separat einschaltbar, standardmäßig aus; Ablaufzeit konfigurierbar. Keine privaten Automations- oder Sicherheitsregeln eingebaut.
-- Vorhandene Modus-Entität, Lichtsteuerung und explizite Schließschnittstelle bleiben.
+Pro Licht/Steckdose ist „Keine Zustandsrückmeldung (z. B. 433 MHz)“ wählbar. Die Automatik übergibt dann pro Zeitplanphase einmal den Ein-/Aus-Befehl, auch bei unbekanntem oder nicht verfügbarem gemeldetem Zustand. Ein vorhandener gemeldeter Zustand wird bei dieser Option nicht als Bestätigung verwendet. Fehlende Entitäten und Servicefehler bleiben Fehler. Keine Dauersendung im 15-Sekunden-Takt; abgeschlossene Phasen bleiben über Neustarts gespeichert.
 
-Vorabstand: HACS-Installation, echte Ressourcenmigration und Rollladenfahrten sind noch nicht live abgenommen. Bereinigte öffentliche Installationsquelle ohne private Projekthistorie. HA2026.11.2 verwendet den eingebauten Marketplace. Keine automatische Installation in HA.
+Standard bleibt die bisherige Zustandsbehandlung. Alte Konfigurationen bleiben gültig. Auf der Übersicht wird bei solchen Geräten ausdrücklich kein tatsächlicher Schaltzustand behauptet. Option im Dashboard pro Gerät aktivieren und Einstellungen speichern. Die Änderung dieser Option gleicht einmal den aktuellen Zeitplan an.
+
+Update über Marketplace installieren, HA neu starten und Browser neu laden. Rollladenkoordination weiterhin optional und unverändert.
